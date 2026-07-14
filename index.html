@@ -6,6 +6,7 @@
 <title>Status de Envio - Fazendas</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -16,7 +17,21 @@
       <span class="status-save" id="saveStatus">Dados compartilhados — carregando...</span>
       <button class="btn-ghost" id="resetBtn">Limpar tudo</button>
       <button class="btn-secondary" id="toggleConfigBtn">Ocultar edição</button>
-      <button class="btn-primary" id="exportBtn">Baixar imagem</button>
+      <button class="btn-ghost" id="importExcelBtn">
+    📂 Importar Planilhas
+</button>
+
+<input
+    type="file"
+    id="excelFiles"
+    accept=".xlsx,.xls"
+    multiple
+    style="display:none;"
+>
+
+<button class="btn-primary" id="exportBtn">
+    Baixar imagem
+</button>
     </div>
   </div>
 
