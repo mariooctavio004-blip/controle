@@ -846,37 +846,77 @@ function renderReport(){
   });
 }
 
-document.getElementById('companyName').addEventListener('input', e=>{ state.company = e.target.value; renderReport(); saveState(); });
-document.getElementById('reportTitle').addEventListener('input', e=>{ state.title = e.target.value; renderReport(); saveState(); });
-document.getElementById('periodLabel').addEventListener('input', e=>{ state.period = e.target.value; renderReport(); saveState(); });
-document.getElementById('bannerText').addEventListener('input', e=>{ state.banner = e.target.value; renderReport(); saveState(); });
+function bind(id, event, callback) {
+    const el = document.getElementById(id);
 
-document.getElementById('addFarmBtn').addEventListener('click', ()=>{
-  state.farms.push('Nova fazenda'); ensureData(); renderAll(); saveState();
-});
-document.getElementById('addDayBtn').addEventListener('click', ()=>{
-  state.days.push('--/--'); ensureData(); renderAll(); saveState();
-});
+    if (!el) {
+        console.warn("Elemento não encontrado:", id);
+        return;
+    }
 
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  document.getElementById('confirmOverlay').style.display = 'flex';
-});
-document.getElementById('confirmCancel').addEventListener('click', ()=>{
-  document.getElementById('confirmOverlay').style.display = 'none';
-});
-document.getElementById('confirmOk').addEventListener('click', ()=>{
-  state = JSON.parse(JSON.stringify(defaultState));
-  ensureData(); renderAll(); saveState();
-  document.getElementById('confirmOverlay').style.display = 'none';
+    el.addEventListener(event, callback);
+}
+
+bind("companyName","input",e=>{
+    state.company=e.target.value;
+    renderReport();
+    saveState();
 });
 
-document.getElementById('toggleConfigBtn').addEventListener('click', (e)=>{
-  const panel = document.getElementById('configPanel');
-  const hidden = panel.style.display === 'none';
-  panel.style.display = hidden ? 'block' : 'none';
-  e.target.textContent = hidden ? 'Ocultar edição' : 'Mostrar edição';
+bind("reportTitle","input",e=>{
+    state.title=e.target.value;
+    renderReport();
+    saveState();
 });
 
+bind("periodLabel","input",e=>{
+    state.period=e.target.value;
+    renderReport();
+    saveState();
+});
+
+bind("bannerText","input",e=>{
+    state.banner=e.target.value;
+    renderReport();
+    saveState();
+});
+
+bind("addFarmBtn","click",()=>{
+    state.farms.push("Nova fazenda");
+    ensureData();
+    renderAll();
+    saveState();
+});
+
+bind("addDayBtn","click",()=>{
+    state.days.push("--/--");
+    ensureData();
+    renderAll();
+    saveState();
+});
+
+bind("resetBtn","click",()=>{
+    document.getElementById("confirmOverlay").style.display="flex";
+});
+
+bind("confirmCancel","click",()=>{
+    document.getElementById("confirmOverlay").style.display="none";
+});
+
+bind("confirmOk","click",()=>{
+    state=JSON.parse(JSON.stringify(defaultState));
+    ensureData();
+    renderAll();
+    saveState();
+    document.getElementById("confirmOverlay").style.display="none";
+});
+
+bind("toggleConfigBtn","click",(e)=>{
+    const panel=document.getElementById("configPanel");
+    const hidden=panel.style.display==="none";
+    panel.style.display=hidden?"block":"none";
+    e.target.textContent=hidden?"Ocultar edição":"Mostrar edição";
+});
 function isIOS(){
   return /iP(hone|od|ad)/.test(navigator.platform) ||
     (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
