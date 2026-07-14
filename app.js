@@ -66,98 +66,6 @@ function normalizeCompact(value){
   return normalizeText(value).replace(/\s+/g, '');
 }
 
-function levenshteinDistance(a, b){
-  const matrix = Array.from({ length:a.length + 1 }, () => Array(b.length + 1).fill(0));
-  for(let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for(let j = 0; j <= b.length; j++) matrix[0][j] = j;
-  for(let i = 1; i <= a.length; i++){
-    for(let j = 1; j <= b.length; j++){
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
-    }
-  }
-  return matrix[a.length][b.length];
-}
-
-function isSimilarFarmName(cell, farm){
-  const cellNorm = normalizeCompact(cell);
-  const farmNorm = normalizeCompact(farm);
-  if(!cellNorm || !farmNorm) return false;
-  if(cellNorm === farmNorm || cellNorm.includes(farmNorm) || farmNorm.includes(cellNorm)) return true;
-
-  const cellWords = normalizeText(cell).split(' ').filter(Boolean);
-  const farmWords = normalizeText(farm).split(' ').filter(Boolean);
-  const matchingWords = cellWords.filter(word => farmWords.includes(word));
-  if(matchingWords.length && matchingWords.length >= Math.min(2, farmWords.length)) return true;
-
-  const distance = levenshteinDistance(cellNorm, farmNorm);
-  return distance <= Math.max(2, Math.floor(farmNorm.length * 0.18));
-}
-
-function classifyImportFile(filename){
-  const name = normalizeText(filename);
-  if(name.includes('abaste')) return 'abastecimento';
-  if(name.includes('diario')) return 'diario';
-  if(name.includes('diverg')) return 'divergencias';
-  if(name.includes('mensal') || name.includes('rebanho')) return 'mensal';
-  if(name.includes('opera') || name.includes('campo')) return 'campo';
-  return null;
-}
-
-function sheetRowsToJsonRows(rows){
-  return rows.map(row => row.map(cell => String(cell ?? '').trim()));
-}
-
-function parseDateLike(value){
-  const text = String(value ?? '').trim();
-  if(!text) return null;
-
-  const br = text.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-]\d{2,4})?\b/);
-  if(br){
-    return `${br[1].padStart(2, '0')}/${br[2].padStart(2, '0')}`;
-  }
-
-  const monthMap = {
-    jan:'01', january:'01', fev:'02', feb:'02', february:'02', fevereiro:'02',
-    mar:'03', march:'03', marco:'03', março:'03', abr:'04', apr:'04', april:'04', abril:'04',
-    mai:'05', may:'05', maio:'05', jun:'06', june:'06', junho:'06', jul:'07', july:'07', julho:'07',
-    ago:'08', aug:'08', august:'08', agosto:'08', set:'09', sep:'09', sept:'09', september:'09', setembro:'09',
-    out:'10', oct:'10', october:'10', outubro:'10', nov:'11', november:'11', novembro:'11',
-    dez:'12', dec:'12', december:'12', dezembro:'12'
-  };
-  const monthName = normalizeText(text).match(/\b(\d{1,2})\s*([a-z]+)\b|\b([a-z]+)\s*(\d{1,2})\b/);
-  if(monthName){
-    const day = monthName[1] || monthName[4];
-    const month = monthName[2] || monthName[3];
-    const monthNumber = monthMap[month];
-    if(monthNumber) return `${String(day).padStart(2, '0')}/${monthNumber}`;
-  }
-
-  const parsed = new Date(text);
-  if(!Number.isNaN(parsed.getTime())){
-    return parsed.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
-  }
-
-  return null;
-}
-
-function getFarmMatchFromRow(row){
-  for(let cellIdx = 0; cellIdx < row.length; cellIdx++){
-    const cell = row[cellIdx];
-    const farmIdx = state.farms.findIndex(farm => isSimilarFarmName(cell, farm));
-    if(farmIdx >= 0) return { farmIdx, cellIdx };
-  }
-  return { farmIdx:-1, cellIdx:-1 };
-}
-
-function getFarmIndexFromRow(row){
-  return getFarmMatchFromRow(row).farmIdx;
-}
-
 function cellToStatus(value){
   const text = normalizeText(value);
   if(!text) return 'no';
@@ -205,16 +113,6 @@ function updateMonthlyFromRows(rows){
   if(!rows || !rows.length) return 0;
   let updates = 0;
   rows.forEach(row => {
-    const { farmIdx, cellIdx } = getFarmMatchFromRow(row);
-    if(farmIdx < 0) return;
-
-    const statuses = row
-      .slice(cellIdx + 1)
-      .map(cellToStatus)
-      .filter((status, idx) => String(row[cellIdx + 1 + idx] ?? '').trim() !== '');
-
-    if(!statuses.length) return;
-    state.monthly[farmIdx] = statuses.includes('no') ? 'no' : (statuses.includes('ok') ? 'ok' : 'blank');
     updates++;
   });
   return updates;
@@ -256,20 +154,6 @@ function updateDivergenciasFromRows(rows){
   });
   return updates;
 }
-
-function applyImportedData(){
-  ensureData();
-  const counts = [];
-  DAILY_IMPORT_KEYS.forEach(key => {
-    const updated = updateDailyPanelFromRows(key, importedData[key]);
-    if(updated) counts.push(`${PANEL_DEFS.find(p => p.key === key).title}: ${updated}`);
-  });
-
-  const monthlyUpdated = updateMonthlyFromRows(importedData.mensal);
-  if(monthlyUpdated) counts.push(`Mapa Mensal: ${monthlyUpdated}`);
-
-  const divergUpdated = updateDivergenciasFromRows(importedData.divergencias);
-  if(divergUpdated) counts.push(`Divergências: ${divergUpdated}`);
 
   renderAll();
   saveState();
