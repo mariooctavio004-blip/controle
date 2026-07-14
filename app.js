@@ -1161,3 +1161,19 @@ window.addEventListener("click", e => {
     }
 
 });
+const configBtn = document.getElementById("configMenuBtn");
+const configMenu = document.getElementById("configMenu");
+
+configBtn?.addEventListener("click", (e)=>{
+
+    e.stopPropagation();
+
+    configMenu.classList.toggle("show");
+
+});
+
+window.addEventListener("click", ()=>{
+
+    configMenu.classList.remove("show");
+
+});
