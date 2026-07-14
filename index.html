@@ -12,24 +12,100 @@
 <div class="app">
 
   <div class="toolbar">
-    <h1>Gerador de Status de Envio</h1>
-    <div class="actions">
-      <span class="status-save" id="saveStatus">Dados compartilhados — carregando...</span>
-      <button class="btn-ghost" id="resetBtn">Limpar tudo</button>
-      <button class="btn-secondary" id="toggleConfigBtn">Ocultar edição</button>
-      <!-- Área da conexão -->
-<div class="connection-box">
 
-    <div class="connection-status">
+    <div class="toolbar-left">
 
-        <span id="connectionIndicator" class="offline">
-            🔴 Nenhuma planilha conectada
+        <h1>STATUS DE ENVIO DOS CONTROLES</h1>
+
+        <span class="toolbar-subtitle">
+            Painel de acompanhamento das fazendas
         </span>
-
-        <span id="currentWorkbook"></span>
 
     </div>
 
+    <div class="toolbar-right">
+
+        <div class="connection-box">
+
+            <div class="connection-status">
+
+                <span id="connectionIndicator">
+                    🔴 Nenhuma planilha conectada
+                </span>
+
+                <span id="currentWorkbook">
+                    Selecione uma planilha
+                </span>
+
+            </div>
+
+            <button class="btn-primary" id="openWorkbookModal">
+                📂 Anexar Planilha
+            </button>
+
+        </div>
+
+        <div class="filter-bar">
+
+            <div class="filter-item">
+
+                <label>Data Inicial</label>
+
+                <input
+                    type="date"
+                    id="reportStartDate"
+                    class="date-input">
+
+            </div>
+
+            <div class="filter-item">
+
+                <label>Data Final</label>
+
+                <input
+                    type="date"
+                    id="reportEndDate"
+                    class="date-input">
+
+            </div>
+
+            <button
+                class="btn-secondary"
+                id="todayBtn">
+
+                📅 Hoje
+
+            </button>
+
+            <button
+                class="btn-secondary"
+                id="last7Btn">
+
+                📆 Últimos 7 dias
+
+            </button>
+
+            <button
+                class="btn-primary"
+                id="processBtn">
+
+                🔄 Atualizar Dados
+
+            </button>
+
+            <button
+                class="btn-secondary"
+                id="exportBtn">
+
+                📸 Exportar
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
     <button
         class="btn-ghost"
         id="openWorkbookModal">
