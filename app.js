@@ -1109,15 +1109,19 @@ workbookInput.addEventListener("change", e => {
         `.workbook-option[data-id="${selectedWorkbookType}"]`
     );
 
-    currentWorkbook.innerHTML = `
-    <strong>${option.innerText}</strong><br>
-    ${file.name}
-`;
+    connectedWorkbooks[selectedWorkbookType] = {
+        id: selectedWorkbookType,
+        title: option.innerText,
+        fileName: file.name,
+        lastUpdate: new Date().toLocaleTimeString(),
+        file
+    };
 
-workbookModal.style.display = "none";
+    updateConnectionStatus();
 
-    
+    workbookModal.style.display = "none";
 
+});
 /* ===========================
    Desvincular
 =========================== */
