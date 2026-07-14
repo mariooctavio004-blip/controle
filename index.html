@@ -3,287 +3,392 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Status de Envio - Fazendas</title>
+
 <link rel="stylesheet" href="style.css">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 </head>
 <body>
+
 <div class="app">
 
-  <div class="toolbar">
+    <!-- =====================================================
+        BARRA SUPERIOR
+    ====================================================== -->
 
-    <div class="toolbar-left">
+    <header class="toolbar">
 
-        <h1>STATUS DE ENVIO DOS CONTROLES</h1>
+        <div class="toolbar-left">
 
-        <span class="toolbar-subtitle">
-            Painel de acompanhamento das fazendas
-        </span>
+            <h1>STATUS DE ENVIO DOS CONTROLES</h1>
 
-    </div>
-
-    <div class="toolbar-center">
-
-        <div class="connection-box">
-
-            <span id="connectionIndicator" class="connection-status">
-                🔴 Nenhuma planilha conectada
+            <span class="toolbar-subtitle">
+                Painel de acompanhamento das fazendas
             </span>
 
-            <div id="currentWorkbook" class="connection-list"></div>
+        </div>
+
+        <div class="toolbar-center">
+
+            <div class="connection-box">
+
+                <span id="connectionIndicator" class="connection-status">
+
+                    🔴 Nenhuma planilha conectada
+
+                </span>
+
+                <div id="currentWorkbook" class="connection-list">
+
+                    Selecione uma planilha
+
+                </div>
+
+            </div>
 
         </div>
 
-    </div>
+        <div class="toolbar-right">
 
-    <div class="toolbar-right">
-
-        <button class="btn-primary" id="openWorkbookModal">
-            📂 Anexar Planilha
-        </button>
-
-        <button class="btn-secondary" id="processBtn">
-            🔄 Atualizar
-        </button>
-
-        <button class="btn-secondary" id="exportBtn">
-            📸 Exportar
-        </button>
-
-        <button class="btn-config" id="configMenuBtn">
-            ⚙
-        </button>
-
-    </div>
-
-</div>
-
-        <div class="filter-bar">
-
-            <div class="filter-item">
-
-                <label>Data Inicial</label>
-
-                <input
-                    type="date"
-                    id="reportStartDate"
-                    class="date-input">
-
-            </div>
-
-            <div class="filter-item">
-
-                <label>Data Final</label>
-
-                <input
-                    type="date"
-                    id="reportEndDate"
-                    class="date-input">
-
-            </div>
-
-            <button
-                class="btn-secondary"
-                id="todayBtn">
-
-                📅 Hoje
-
+            <button id="openWorkbookModal" class="btn-primary">
+                📂 Planilhas
             </button>
 
-            <button
-                class="btn-secondary"
-                id="last7Btn">
-
-                📆 Últimos 7 dias
-
+            <button id="processBtn" class="btn-secondary">
+                🔄 Atualizar
             </button>
 
-            <button
-                class="btn-primary"
-                id="processBtn">
-
-                🔄 Atualizar Dados
-
-            </button>
-
-            <button
-                class="btn-secondary"
-                id="exportBtn">
-
+            <button id="exportBtn" class="btn-secondary">
                 📸 Exportar
+            </button>
 
+            <button id="configMenuBtn" class="btn-config">
+                ⚙
             </button>
 
         </div>
 
+    </header>
+
+    <!-- =====================================================
+        MENU CONFIGURAÇÕES
+    ====================================================== -->
+
+    <div id="configMenu" class="config-menu">
+
+        <button id="toggleConfigBtn">
+
+            👁 Mostrar / Ocultar edição
+
+        </button>
+
+        <button id="resetBtn">
+
+            🗑 Limpar todos os dados
+
+        </button>
+
     </div>
 
-</div>
- 
+    <!-- =====================================================
+        FILTROS
+    ====================================================== -->
 
-<!-- Modal -->
+    <div class="filter-bar">
 
-<div
-    id="workbookModal"
-    class="modal"
-    style="display:none;">
+        <div class="filter-item">
 
-    <div class="modal-content">
+            <label>Data Inicial</label>
 
-        <h2>
-
-            Escolha uma planilha
-
-        </h2>
-      <div id="configMenu" class="config-menu">
-
-    <button id="toggleConfigBtn">
-
-        👁 Mostrar / Ocultar edição
-
-    </button>
-
-    <button id="resetBtn">
-
-        🗑 Limpar todos os dados
-
-    </button>
-
-</div>
-
-        <div id="workbookList">
-
-            <button class="workbook-option" data-id="campo">
-    🚜 Operações em Campo
-</button>
-
-<button class="workbook-option" data-id="abastecimento">
-    ⛽ Abastecimento
-</button>
-
-<button class="workbook-option" data-id="diario">
-    📋 Diário de Campo (Manejo/Rebanho)
-</button>
-
-<button class="workbook-option" data-id="mensal">
-    🐄 Mapa Mensal do Rebanho
-</button>
-
-<button class="workbook-option" data-id="divergencias">
-    ⚖️ Divergências entre Diário e Sistema
-</button>
+            <input
+                type="date"
+                id="reportStartDate"
+                class="date-input">
 
         </div>
 
-        <div class="modal-actions">
+        <div class="filter-item">
 
-            <button
-                class="btn-secondary"
-                id="closeWorkbookModal">
+            <label>Data Final</label>
 
-                Cancelar
+            <input
+                type="date"
+                id="reportEndDate"
+                class="date-input">
 
-            </button>
+        </div>
 
-            <button
-                class="btn-danger"
-                id="disconnectWorkbook">
+        <button
+            id="todayBtn"
+            class="btn-secondary">
 
-                ✖ Desvincular
+            📅 Hoje
 
-            </button>
+        </button>
+
+        <button
+            id="last7Btn"
+            class="btn-secondary">
+
+            📆 Últimos 7 dias
+
+        </button>
+
+    </div>
+
+    <!-- =====================================================
+        MODAL PLANILHAS
+    ====================================================== -->
+
+    <div
+        id="workbookModal"
+        class="modal"
+        style="display:none;">
+
+        <div class="modal-content">
+
+            <h2>Escolha uma planilha</h2>
+
+            <div id="workbookList">
+
+                <button class="workbook-option" data-id="campo">
+                    🚜 Operações em Campo
+                </button>
+
+                <button class="workbook-option" data-id="abastecimento">
+                    ⛽ Abastecimento
+                </button>
+
+                <button class="workbook-option" data-id="diario">
+                    📋 Diário de Campo
+                </button>
+
+                <button class="workbook-option" data-id="mensal">
+                    🐄 Mapa Mensal do Rebanho
+                </button>
+
+                <button class="workbook-option" data-id="divergencias">
+                    ⚖ Divergências Diário x Sistema
+                </button>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button
+                    id="closeWorkbookModal"
+                    class="btn-secondary">
+
+                    Cancelar
+
+                </button>
+
+                <button
+                    id="disconnectWorkbook"
+                    class="btn-danger">
+
+                    Remover vínculo
+
+                </button>
+
+            </div>
 
         </div>
 
     </div>
 
-</div>
-    </div>
-  </div>
+    <!-- =====================================================
+        CONFIRMAR LIMPEZA
+    ====================================================== -->
 
-  <div id="confirmOverlay" class="confirm-overlay" style="display:none;">
-    <div class="confirm-box">
-      <p>Isso vai apagar todos os dados salvos e voltar ao exemplo padrão. Continuar?</p>
-      <div class="confirm-actions">
-        <button class="btn-secondary" id="confirmCancel">Cancelar</button>
-        <button class="btn-danger" id="confirmOk">Limpar tudo</button>
-      </div>
-    </div>
-  </div>
+    <div
+        id="confirmOverlay"
+        class="confirm-overlay"
+        style="display:none;">
 
-  <div class="panel-config" id="configPanel">
-    <h2>Configurações gerais</h2>
-    <div class="config-row" style="display:none;">
-      <label>Empresa</label>
-      <input type="text" id="companyName" placeholder="Nelore Cometa">
-    </div>
-    <div class="config-row">
-      <label>Título do quadro</label>
-      <input type="text" id="reportTitle" placeholder="Status de Envio dos Controles - Fazendas">
-    </div>
-    <div class="config-row">
-      <label>Período (topo)</label>
-      <input type="text" id="periodLabel" placeholder="01/07 A 04/07">
-    </div>
-    <div class="config-row">
-      <label>Aviso do topo</label>
-      <input type="text" id="bannerText" placeholder="Contamos com todos para mantermos a disciplina e a qualidade das informações!">
-    </div>
+        <div class="confirm-box">
 
-    <h2 style="margin-top:18px;">Quais painéis entram na imagem (escolha até 4)</h2>
-    <div class="panel-select-list" id="panelSelectList"></div>
-    <div class="select-warning" id="selectWarning" style="display:none;">Você já escolheu 4 painéis. Desmarque um para trocar.</div>
+            <p>
 
-    <h2 style="margin-top:18px;">Fazendas</h2>
-    <div class="farm-list" id="farmList"></div>
-    <button class="add-chip" id="addFarmBtn">+ Adicionar fazenda</button>
+                Isso apagará todos os dados.
 
-    <h2 style="margin-top:18px;">Dias do período (colunas dos painéis diários)</h2>
-    <div class="day-list" id="dayList"></div>
-    <button class="add-chip" id="addDayBtn">+ Adicionar dia</button>
+                Deseja continuar?
 
-    <p style="font-size:12px;color:var(--muted);margin-top:14px;">
-      Nos painéis com dias, clique no círculo para alternar: vermelho (pendente) → branco (não enviado, ex: em compra) → verde (recebido). No painel de Divergências, digite os números — a diferença é calculada sozinha e a linha TOTAL soma as diferenças de todas as fazendas.
-    </p>
-    <p style="font-size:12px;color:var(--muted);margin-top:6px;">
-      <strong>Compartilhado:</strong> quem também abrir esta ferramenta pelo mesmo link vê e edita os mesmos dados, atualizados automaticamente a cada poucos segundos.
-    </p>
-  </div>
+            </p>
 
-  <div id="report">
-    <div class="rep-header">
-      <svg class="rep-header-accent" viewBox="0 0 220 130" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0,92 C42,42 92,12 220,0 L220,15 C100,26 56,56 15,100 C10,109 4,113 0,111 Z" fill="var(--gold)"/>
-      </svg>
-      <div class="rep-header-top">
-        <p class="rep-title" id="titleDisplay">STATUS DE ENVIO DOS CONTROLES - FAZENDAS</p>
-        <div class="rep-logo">
-          <img src="logo.png" alt="Nelore Cometa" class="rep-logo-img" id="logoImg">
+            <div class="confirm-actions">
+
+                <button
+                    id="confirmCancel"
+                    class="btn-secondary">
+
+                    Cancelar
+
+                </button>
+
+                <button
+                    id="confirmOk"
+                    class="btn-danger">
+
+                    Limpar tudo
+
+                </button>
+
+            </div>
+
         </div>
-      </div>
-      <div class="rep-period-box">
-        <span class="rep-period-icon">&#128197;</span>
-        <span>PERÍODO: <span id="periodDisplay">01/07 A 04/07</span></span>
-      </div>
+
     </div>
 
-    <div class="rep-banner" id="bannerDisplay">
-      Contamos com todos para mantermos a disciplina e a qualidade das informações!
+    <!-- =====================================================
+        PAINEL DE CONFIGURAÇÃO
+    ====================================================== -->
+
+    <div
+        id="configPanel"
+        class="panel-config">
+
+        <h2>Configurações Gerais</h2>
+
+        <div class="config-row" style="display:none;">
+
+            <label>Empresa</label>
+
+            <input
+                id="companyName"
+                type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Título</label>
+
+            <input
+                id="reportTitle"
+                type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Período</label>
+
+            <input
+                id="periodLabel"
+                type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Aviso</label>
+
+            <input
+                id="bannerText"
+                type="text">
+
+        </div>
+
+        <h2>Painéis</h2>
+
+        <div id="panelSelectList"></div>
+
+        <div
+            id="selectWarning"
+            style="display:none;">
+
+        </div>
+
+        <h2>Fazendas</h2>
+
+        <div id="farmList"></div>
+
+        <button
+            id="addFarmBtn"
+            class="add-chip">
+
+            + Adicionar fazenda
+
+        </button>
+
+        <h2>Dias</h2>
+
+        <div id="dayList"></div>
+
+        <button
+            id="addDayBtn"
+            class="add-chip">
+
+            + Adicionar dia
+
+        </button>
+
     </div>
 
-    <div class="rep-grid" id="reportGrid"></div>
+    <!-- =====================================================
+        RELATÓRIO
+    ====================================================== -->
 
-    <div class="rep-bottombar">
-      <svg class="rep-bottombar-accent" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0,45 C120,12 260,55 420,26 C500,10 560,30 600,16 L600,60 L0,60 Z" fill="var(--gold)" fill-opacity="0.35"/>
-      </svg>
-      <span class="rep-bottombar-text">DISCIPLINA NA INFORMAÇÃO, EXCELÊNCIA NA GESTÃO &nbsp;|&nbsp; PRAZO DE ENVIO DIÁRIO</span>
+    <div id="report">
+
+        <div class="rep-header">
+
+            <div class="rep-header-top">
+
+                <p
+                    id="titleDisplay"
+                    class="rep-title">
+
+                </p>
+
+                <div class="rep-logo">
+
+                    <img
+                        src="logo.png"
+                        id="logoImg"
+                        class="rep-logo-img">
+
+                </div>
+
+            </div>
+
+            <div class="rep-period-box">
+
+                PERÍODO:
+                <span id="periodDisplay"></span>
+
+            </div>
+
+        </div>
+
+        <div
+            id="bannerDisplay"
+            class="rep-banner">
+
+        </div>
+
+        <div
+            id="reportGrid"
+            class="rep-grid">
+
+        </div>
+
+        <div class="rep-bottombar">
+
+            DISCIPLINA NA INFORMAÇÃO • EXCELÊNCIA NA GESTÃO
+
+        </div>
+
     </div>
-  </div>
 
 </div>
 
 <script src="app.js"></script>
+
 </body>
 </html>
