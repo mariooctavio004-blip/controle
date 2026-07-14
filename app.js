@@ -41,62 +41,276 @@ let state = null;
 // =========================
 
 const importedData = {
-    campo: [],
-    abastecimento: [],
-    diario: [],
-    divergencias: []
+  campo: null,
+  abastecimento: null,
+  diario: null,
+  mensal: null,
+  divergencias: null
 };
 
-document.getElementById("importExcelBtn")?.addEventListener("click", () => {
-    document.getElementById("excelFiles").click();
-});
+const DAILY_IMPORT_KEYS = ['campo', 'abastecimento', 'diario'];
 
-document.getElementById("excelFiles")?.addEventListener("change", async (e) => {
+function normalizeText(value){
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
 
-    const files = [...e.target.files];
+function normalizeCompact(value){
+  return normalizeText(value).replace(/\s+/g, '');
+}
 
-    if (!files.length) return;
+function levenshteinDistance(a, b){
+  const matrix = Array.from({ length:a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for(let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for(let j = 0; j <= b.length; j++) matrix[0][j] = j;
+  for(let i = 1; i <= a.length; i++){
+    for(let j = 1; j <= b.length; j++){
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
 
-    for (const file of files) {
+function isSimilarFarmName(cell, farm){
+  const cellNorm = normalizeCompact(cell);
+  const farmNorm = normalizeCompact(farm);
+  if(!cellNorm || !farmNorm) return false;
+  if(cellNorm === farmNorm || cellNorm.includes(farmNorm) || farmNorm.includes(cellNorm)) return true;
 
-        const data = await file.arrayBuffer();
+  const cellWords = normalizeText(cell).split(' ').filter(Boolean);
+  const farmWords = normalizeText(farm).split(' ').filter(Boolean);
+  const matchingWords = cellWords.filter(word => farmWords.includes(word));
+  if(matchingWords.length && matchingWords.length >= Math.min(2, farmWords.length)) return true;
 
-        const workbook = XLSX.read(data, {
-            type: "array"
-        });
+  const distance = levenshteinDistance(cellNorm, farmNorm);
+  return distance <= Math.max(2, Math.floor(farmNorm.length * 0.18));
+}
 
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+function classifyImportFile(filename){
+  const name = normalizeText(filename);
+  if(name.includes('abaste')) return 'abastecimento';
+  if(name.includes('diario')) return 'diario';
+  if(name.includes('diverg')) return 'divergencias';
+  if(name.includes('mensal') || name.includes('rebanho')) return 'mensal';
+  if(name.includes('opera') || name.includes('campo')) return 'campo';
+  return null;
+}
 
-        const json = XLSX.utils.sheet_to_json(sheet, {
-            header: 1,
-            raw: false
-        });
+function sheetRowsToJsonRows(rows){
+  return rows.map(row => row.map(cell => String(cell ?? '').trim()));
+}
 
-        const name = file.name.toLowerCase();
+function parseDateLike(value){
+  const text = String(value ?? '').trim();
+  if(!text) return null;
 
-        if (name.includes("opera")) {
+  const br = text.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-]\d{2,4})?\b/);
+  if(br){
+    return `${br[1].padStart(2, '0')}/${br[2].padStart(2, '0')}`;
+  }
 
-            importedData.campo = json;
+  const monthMap = {
+    jan:'01', january:'01', fev:'02', feb:'02', february:'02', fevereiro:'02',
+    mar:'03', march:'03', marco:'03', março:'03', abr:'04', apr:'04', april:'04', abril:'04',
+    mai:'05', may:'05', maio:'05', jun:'06', june:'06', junho:'06', jul:'07', july:'07', julho:'07',
+    ago:'08', aug:'08', august:'08', agosto:'08', set:'09', sep:'09', sept:'09', september:'09', setembro:'09',
+    out:'10', oct:'10', october:'10', outubro:'10', nov:'11', november:'11', novembro:'11',
+    dez:'12', dec:'12', december:'12', dezembro:'12'
+  };
+  const monthName = normalizeText(text).match(/\b(\d{1,2})\s*([a-z]+)\b|\b([a-z]+)\s*(\d{1,2})\b/);
+  if(monthName){
+    const day = monthName[1] || monthName[4];
+    const month = monthName[2] || monthName[3];
+    const monthNumber = monthMap[month];
+    if(monthNumber) return `${String(day).padStart(2, '0')}/${monthNumber}`;
+  }
 
-        } else if (name.includes("abaste")) {
+  const parsed = new Date(text);
+  if(!Number.isNaN(parsed.getTime())){
+    return parsed.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  }
 
-            importedData.abastecimento = json;
+  return null;
+}
 
-        } else if (name.includes("diario")) {
+function getFarmMatchFromRow(row){
+  for(let cellIdx = 0; cellIdx < row.length; cellIdx++){
+    const cell = row[cellIdx];
+    const farmIdx = state.farms.findIndex(farm => isSimilarFarmName(cell, farm));
+    if(farmIdx >= 0) return { farmIdx, cellIdx };
+  }
+  return { farmIdx:-1, cellIdx:-1 };
+}
 
-            importedData.diario = json;
+function getFarmIndexFromRow(row){
+  return getFarmMatchFromRow(row).farmIdx;
+}
 
-        } else if (name.includes("diverg")) {
+function cellToStatus(value){
+  const text = normalizeText(value);
+  if(!text) return 'no';
+  if(['ok', 'sim', 's', 'recebido', 'enviado', 'entregue', 'lancado', 'feito', 'concluido', '1', 'true', 'x'].includes(text)) return 'ok';
+  if(text.includes('recebid') || text.includes('enviad') || text.includes('concluid') || text.includes('lancad')) return 'ok';
+  if(text.includes('compra') || text.includes('n a') || text.includes('nao se aplica') || text === '-') return 'blank';
+  if(text.includes('pend') || text.includes('nao') || text.includes('falta') || text.includes('atras')) return 'no';
+  const num = Number(String(value).replace(',', '.'));
+  if(!Number.isNaN(num)) return num > 0 ? 'ok' : 'no';
+  return 'ok';
+}
 
-            importedData.divergencias = json;
+function findDateColumns(rows){
+  const columns = {};
+  rows.slice(0, 12).forEach(row => {
+    row.forEach((cell, idx) => {
+      const label = parseDateLike(cell);
+      if(label && state.days.includes(label)) columns[label] = idx;
+    });
+  });
+  return columns;
+}
 
-        }
+function updateDailyPanelFromRows(panelKey, rows){
+  if(!rows || !rows.length) return 0;
+  const dateColumns = findDateColumns(rows);
+  let updates = 0;
 
+  rows.forEach(row => {
+    const farmIdx = getFarmIndexFromRow(row);
+    if(farmIdx < 0) return;
+
+    state.days.forEach((day, dayIdx) => {
+      const colIdx = dateColumns[day];
+      if(colIdx === undefined) return;
+      state.data[panelKey][farmIdx][dayIdx] = cellToStatus(row[colIdx]);
+      updates++;
+    });
+  });
+
+  return updates;
+}
+
+function updateMonthlyFromRows(rows){
+  if(!rows || !rows.length) return 0;
+  let updates = 0;
+  rows.forEach(row => {
+    const { farmIdx, cellIdx } = getFarmMatchFromRow(row);
+    if(farmIdx < 0) return;
+
+    const statuses = row
+      .slice(cellIdx + 1)
+      .map(cellToStatus)
+      .filter((status, idx) => String(row[cellIdx + 1 + idx] ?? '').trim() !== '');
+
+    if(!statuses.length) return;
+    state.monthly[farmIdx] = statuses.includes('no') ? 'no' : (statuses.includes('ok') ? 'ok' : 'blank');
+    updates++;
+  });
+  return updates;
+}
+
+function findHeaderColumns(rows){
+  const aliases = {
+    nd: ['nasc diario', 'nascimento diario', 'nascimentos diario'],
+    ns: ['nasc sistema', 'nascimento sistema', 'nascimentos sistema'],
+    md: ['mortes diario', 'morte diario', 'mort diario'],
+    ms: ['mortes sistema', 'morte sistema', 'mort sistema']
+  };
+  const columns = {};
+  rows.slice(0, 15).forEach(row => {
+    row.forEach((cell, idx) => {
+      const text = normalizeText(cell);
+      Object.entries(aliases).forEach(([field, names]) => {
+        if(columns[field] === undefined && names.some(name => text.includes(name))) columns[field] = idx;
+      });
+    });
+  });
+  return columns;
+}
+
+function updateDivergenciasFromRows(rows){
+  if(!rows || !rows.length) return 0;
+  const columns = findHeaderColumns(rows);
+  let updates = 0;
+  rows.forEach(row => {
+    const farmIdx = getFarmIndexFromRow(row);
+    if(farmIdx < 0) return;
+    ['nd', 'ns', 'md', 'ms'].forEach(field => {
+      const colIdx = columns[field];
+      if(colIdx === undefined) return;
+      const raw = String(row[colIdx] ?? '').replace(/[^0-9-]/g, '');
+      state.diverg[farmIdx][field] = raw;
+      updates++;
+    });
+  });
+  return updates;
+}
+
+function applyImportedData(){
+  ensureData();
+  const counts = [];
+  DAILY_IMPORT_KEYS.forEach(key => {
+    const updated = updateDailyPanelFromRows(key, importedData[key]);
+    if(updated) counts.push(`${PANEL_DEFS.find(p => p.key === key).title}: ${updated}`);
+  });
+
+  const monthlyUpdated = updateMonthlyFromRows(importedData.mensal);
+  if(monthlyUpdated) counts.push(`Mapa Mensal: ${monthlyUpdated}`);
+
+  const divergUpdated = updateDivergenciasFromRows(importedData.divergencias);
+  if(divergUpdated) counts.push(`Divergências: ${divergUpdated}`);
+
+  renderAll();
+  saveState();
+  showInlineWarning(counts.length ? `Planilhas importadas. Campos atualizados: ${counts.join(' | ')}` : 'Nenhum dado compatível foi encontrado nas planilhas importadas.');
+}
+
+async function importExcelFiles(files){
+  for(const file of files){
+    const key = classifyImportFile(file.name);
+    if(!key){
+      showInlineWarning(`Não reconheci o tipo da planilha: ${file.name}`);
+      continue;
     }
 
-    preencherSistema();
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type:'array', cellDates:true });
+    const rows = [];
+    workbook.SheetNames.forEach(sheetName => {
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
+      rows.push(...sheetRowsToJsonRows(json));
+    });
+    importedData[key] = rows;
+  }
 
+  applyImportedData();
+}
+
+function preencherSistema(){
+  applyImportedData();
+}
+
+document.getElementById('importExcelBtn')?.addEventListener('click', () => {
+  document.getElementById('excelFiles').click();
 });
+
+document.getElementById('excelFiles')?.addEventListener('change', async e => {
+  const files = [...e.target.files];
+  if(!files.length) return;
+  await importExcelFiles(files);
+  e.target.value = '';
+});
+
+document.getElementById('processBtn')?.addEventListener('click', preencherSistema);
 const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
 function normalizeStatus(v){
   if(v === true) return 'ok';
@@ -184,12 +398,6 @@ function startPolling(){
 }
 
 function renderAll(){ renderConfig(); renderReport(); }
-
-function preencherSistema(){
-
-    console.log(importedData);
-
-}
 
 function renderConfig(){
   document.getElementById('companyName').value = state.company;
@@ -580,53 +788,33 @@ window.addEventListener('afterprint', restoreInputsAfterCapture);
 // ===========================================
 
 function validarImportacao(){
+  const labels = {
+    campo: 'Operações em Campo',
+    abastecimento: 'Abastecimento',
+    diario: 'Diário',
+    mensal: 'Mapa Mensal',
+    divergencias: 'Divergências'
+  };
+  const importadas = Object.entries(importedData)
+    .filter(([, rows]) => Array.isArray(rows) && rows.length)
+    .map(([key]) => labels[key]);
 
-    const faltando = [];
+  if(!importadas.length){
+    alert('Nenhuma planilha foi importada ainda.');
+    return;
+  }
 
-    if(!excelData.operacoes)
-        faltando.push("Operações");
-
-    if(!excelData.abastecimento)
-        faltando.push("Abastecimento");
-
-    if(!excelData.diario)
-        faltando.push("Diário");
-
-    if(!excelData.divergencias)
-        faltando.push("Divergências");
-
-    if(faltando.length){
-
-        alert(
-            "Faltam as seguintes planilhas:\n\n" +
-            faltando.join("\n")
-        );
-
-        return;
-
-    }
-
-    alert("Todas as planilhas foram importadas com sucesso.");
-
-    prepararDados();
-
+  alert('Planilhas importadas:\n\n' + importadas.join('\n'));
+  prepararDados();
 }
 
 function prepararDados(){
-
-    console.clear();
-
-    console.log("Operações");
-    console.table(excelData.operacoes);
-
-    console.log("Abastecimento");
-    console.table(excelData.abastecimento);
-
-    console.log("Diário");
-    console.table(excelData.diario);
-
-    console.log("Divergências");
-    console.table(excelData.divergencias);
-
+  console.clear();
+  Object.entries(importedData).forEach(([key, rows]) => {
+    if(Array.isArray(rows) && rows.length){
+      console.log(key);
+      console.table(rows);
+    }
+  });
 }
 loadState();
