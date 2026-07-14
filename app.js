@@ -36,7 +36,67 @@ const defaultState = {
 };
 
 let state = null;
+// =========================
+// IMPORTAÇÃO DE PLANILHAS
+// =========================
 
+const importedData = {
+    campo: [],
+    abastecimento: [],
+    diario: [],
+    divergencias: []
+};
+
+document.getElementById("importExcelBtn")?.addEventListener("click", () => {
+    document.getElementById("excelFiles").click();
+});
+
+document.getElementById("excelFiles")?.addEventListener("change", async (e) => {
+
+    const files = [...e.target.files];
+
+    if (!files.length) return;
+
+    for (const file of files) {
+
+        const data = await file.arrayBuffer();
+
+        const workbook = XLSX.read(data, {
+            type: "array"
+        });
+
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+        const json = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false
+        });
+
+        const name = file.name.toLowerCase();
+
+        if (name.includes("opera")) {
+
+            importedData.campo = json;
+
+        } else if (name.includes("abaste")) {
+
+            importedData.abastecimento = json;
+
+        } else if (name.includes("diario")) {
+
+            importedData.diario = json;
+
+        } else if (name.includes("diverg")) {
+
+            importedData.divergencias = json;
+
+        }
+
+    }
+
+    preencherSistema();
+
+});
 const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
 function normalizeStatus(v){
   if(v === true) return 'ok';
@@ -124,6 +184,12 @@ function startPolling(){
 }
 
 function renderAll(){ renderConfig(); renderReport(); }
+
+function preencherSistema(){
+
+    console.log(importedData);
+
+}
 
 function renderConfig(){
   document.getElementById('companyName').value = state.company;
