@@ -977,91 +977,125 @@ loadState();
 ============================================================ */
 
 const workbookModal = document.getElementById("workbookModal");
-
 const openWorkbookModal = document.getElementById("openWorkbookModal");
-
 const closeWorkbookModal = document.getElementById("closeWorkbookModal");
 
 const connectionIndicator = document.getElementById("connectionIndicator");
-
 const currentWorkbook = document.getElementById("currentWorkbook");
+const disconnectWorkbook = document.getElementById("disconnectWorkbook");
+
+/* input oculto para abrir o seletor de arquivos */
+const workbookInput = document.createElement("input");
+workbookInput.type = "file";
+workbookInput.accept = ".xlsx,.xls";
+workbookInput.style.display = "none";
+document.body.appendChild(workbookInput);
 
 let connectedWorkbook = null;
+let selectedWorkbookType = null;
 
+/* ===========================
+   Abrir Modal
+=========================== */
 
-/* Abrir modal */
+openWorkbookModal?.addEventListener("click", () => {
 
-if(openWorkbookModal){
+    workbookModal.style.display = "flex";
 
-    openWorkbookModal.addEventListener("click",()=>{
+});
 
-        workbookModal.style.display="flex";
+/* ===========================
+   Fechar Modal
+=========================== */
 
-    });
+closeWorkbookModal?.addEventListener("click", () => {
 
-}
+    workbookModal.style.display = "none";
 
+});
 
-/* Fechar modal */
+/* ===========================
+   Escolha da planilha
+=========================== */
 
-if(closeWorkbookModal){
+document.querySelectorAll(".workbook-option").forEach(btn => {
 
-    closeWorkbookModal.addEventListener("click",()=>{
+    btn.addEventListener("click", () => {
 
-        workbookModal.style.display="none";
+        selectedWorkbookType = btn.dataset.id;
 
-    });
-
-}
-
-
-/* Escolher planilha */
-
-document.querySelectorAll(".workbook-option").forEach(btn=>{
-
-    btn.addEventListener("click",()=>{
-
-        connectedWorkbook={
-
-            id:btn.dataset.id,
-
-            nome:btn.innerText
-
-        };
-
-        connectionIndicator.textContent="🟢 Planilha conectada";
-
-        currentWorkbook.textContent=connectedWorkbook.nome;
-
-        workbookModal.style.display="none";
+        workbookInput.click();
 
     });
 
 });
 
+/* ===========================
+   Arquivo escolhido
+=========================== */
 
-/* Desvincular */
+workbookInput.addEventListener("change", e => {
 
-document.getElementById("disconnectWorkbook")?.addEventListener("click",()=>{
+    const file = e.target.files[0];
 
-    if(!confirm("Deseja desvincular esta planilha?")) return;
+    if (!file) return;
 
-    connectedWorkbook=null;
+    const option = document.querySelector(
+        `.workbook-option[data-id="${selectedWorkbookType}"]`
+    );
 
-    connectionIndicator.textContent="🔴 Nenhuma planilha conectada";
+    connectedWorkbook = {
 
-    currentWorkbook.textContent="";
+        id: selectedWorkbookType,
+
+        name: option.innerText,
+
+        file
+
+    };
+
+    connectionIndicator.innerHTML = "🟢 Planilha conectada";
+
+    currentWorkbook.innerHTML = `
+        <strong>${option.innerText}</strong><br>
+        ${file.name}
+    `;
+
+    workbookModal.style.display = "none";
 
 });
 
+/* ===========================
+   Desvincular
+=========================== */
 
-/* Fechar clicando fora */
+disconnectWorkbook?.addEventListener("click", () => {
 
-window.addEventListener("click",(e)=>{
+    if (!connectedWorkbook) return;
 
-    if(e.target===workbookModal){
+    if (!confirm("Deseja remover esta planilha?")) return;
 
-        workbookModal.style.display="none";
+    connectedWorkbook = null;
+
+    selectedWorkbookType = null;
+
+    workbookInput.value = "";
+
+    connectionIndicator.innerHTML = "🔴 Nenhuma planilha conectada";
+
+    currentWorkbook.innerHTML = "Selecione uma planilha";
+
+});
+
+/* ===========================
+   Fechar clicando fora
+=========================== */
+
+window.addEventListener("click", e => {
+
+    if (e.target === workbookModal) {
+
+        workbookModal.style.display = "none";
 
     }
 
