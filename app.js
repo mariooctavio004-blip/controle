@@ -33,8 +33,44 @@ const defaultState = {
   data: {},       // data[panelKey][farmIdx][dayIdx] = bool  (daily panels)
   monthly: {},    // monthly[farmIdx] = bool
   diverg: {},     // diverg[farmIdx] = { nd, ns, md, ms } numbers
-  sharepointUrl: '',   // link da planilha online anexada (fica salvo até ser removido)
-  lastSync: '',        // horário da última sincronização com a planilha online
+  sharepoint: {
+
+  campo: {
+    name: "Operações em Campo",
+    url: "",
+    connected: false,
+    lastSync: ""
+  },
+
+  abastecimento: {
+    name: "Abastecimento",
+    url: "",
+    connected: false,
+    lastSync: ""
+  },
+
+  diario: {
+    name: "Diário de Campo",
+    url: "",
+    connected: false,
+    lastSync: ""
+  },
+
+  mensal: {
+    name: "Mapa Mensal do Rebanho",
+    url: "",
+    connected: false,
+    lastSync: ""
+  },
+
+  divergencias: {
+    name: "Divergências entre Diário e Sistema",
+    url: "",
+    connected: false,
+    lastSync: ""
+  }
+
+},
   filterStart: '',     // data inicial (YYYY-MM-DD) do período mostrado nos painéis
   filterEnd: ''         // data final (YYYY-MM-DD) do período mostrado nos painéis
 };
