@@ -38,6 +38,9 @@ const defaultState = {
 let state = null;
 // =========================
 // IMPORTAÇÃO DE PLANILHAS
+// Suporta os layouts das planilhas usadas no Excel:
+// - Diário, Operação, Abastecimento e Mapa Mensal: fazendas nas linhas e datas nas colunas.
+// - Divergências: cabeçalhos de nascimento/mortes diário x sistema.
 // =========================
 
 const importedData = {
