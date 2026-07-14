@@ -709,3 +709,62 @@ input[type="date"]{
     }
 
 }
+/* ===== NOVA TOOLBAR ===== */
+
+.toolbar{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:flex-start;
+
+    gap:30px;
+
+    flex-wrap:wrap;
+
+}
+
+.toolbar-left{
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+
+.toolbar-left h1{
+
+    margin:0;
+
+    font-size:32px;
+
+}
+
+.toolbar-subtitle{
+
+    color:#6b7280;
+
+    margin-top:8px;
+
+}
+
+.toolbar-right{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:15px;
+
+}
+
+.filter-item{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:4px;
+
+}
