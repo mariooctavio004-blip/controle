@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -12,186 +14,98 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 </head>
+
 <body>
 
 <div class="app">
 
-    <!-- =====================================================
-        BARRA SUPERIOR
-    ====================================================== -->
+<!-- ===========================================================
+HEADER
+=========================================================== -->
 
-    <header class="toolbar">
+<header class="toolbar">
 
-        <div class="toolbar-left">
+    <div class="toolbar-left">
+
+        <div class="title-group">
 
             <h1>STATUS DE ENVIO DOS CONTROLES</h1>
 
             <span class="toolbar-subtitle">
+
                 Painel de acompanhamento das fazendas
+
             </span>
 
         </div>
 
-        <div class="toolbar-center">
+    </div>
 
-            <div class="connection-box">
+    <div class="toolbar-center">
 
-                <span id="connectionIndicator" class="connection-status">
+        <div class="connection-card">
 
-                    🔴 Nenhuma planilha conectada
+            <div class="connection-header">
+
+                <span class="connection-dot"></span>
+
+                <span id="connectionIndicator">
+
+                    Nenhuma planilha conectada
 
                 </span>
 
-                <div id="currentWorkbook" class="connection-list">
+            </div>
 
-                    Selecione uma planilha
+            <div id="currentWorkbook" class="connection-list">
 
-                </div>
+                Selecione uma planilha
 
             </div>
 
         </div>
 
-        <div class="toolbar-right">
+    </div>
 
-            <button id="openWorkbookModal" class="btn-primary">
-                📂 Planilhas
-            </button>
+    <div class="toolbar-right">
 
-            <button id="processBtn" class="btn-secondary">
-                🔄 Atualizar
-            </button>
+        <button id="openWorkbookModal" class="btn-primary">
 
-            <button id="exportBtn" class="btn-secondary">
-                📸 Exportar
-            </button>
+            📂 Planilhas
+
+        </button>
+
+        <button id="processBtn" class="btn-secondary">
+
+            🔄 Atualizar
+
+        </button>
+
+        <button id="exportBtn" class="btn-secondary">
+
+            📸 Exportar
+
+        </button>
+
+        <div class="config-dropdown">
 
             <button id="configMenuBtn" class="btn-config">
+
                 ⚙
+
             </button>
 
-        </div>
+            <div id="configMenu" class="config-menu">
 
-    </header>
+                <button id="toggleConfigBtn">
 
-    <!-- =====================================================
-        MENU CONFIGURAÇÕES
-    ====================================================== -->
-
-    <div id="configMenu" class="config-menu">
-
-        <button id="toggleConfigBtn">
-
-            👁 Mostrar / Ocultar edição
-
-        </button>
-
-        <button id="resetBtn">
-
-            🗑 Limpar todos os dados
-
-        </button>
-
-    </div>
-
-    <!-- =====================================================
-        FILTROS
-    ====================================================== -->
-
-    <div class="filter-bar">
-
-        <div class="filter-item">
-
-            <label>Data Inicial</label>
-
-            <input
-                type="date"
-                id="reportStartDate"
-                class="date-input">
-
-        </div>
-
-        <div class="filter-item">
-
-            <label>Data Final</label>
-
-            <input
-                type="date"
-                id="reportEndDate"
-                class="date-input">
-
-        </div>
-
-        <button
-            id="todayBtn"
-            class="btn-secondary">
-
-            📅 Hoje
-
-        </button>
-
-        <button
-            id="last7Btn"
-            class="btn-secondary">
-
-            📆 Últimos 7 dias
-
-        </button>
-
-    </div>
-
-    <!-- =====================================================
-        MODAL PLANILHAS
-    ====================================================== -->
-
-    <div
-        id="workbookModal"
-        class="modal"
-        style="display:none;">
-
-        <div class="modal-content">
-
-            <h2>Escolha uma planilha</h2>
-
-            <div id="workbookList">
-
-                <button class="workbook-option" data-id="campo">
-                    🚜 Operações em Campo
-                </button>
-
-                <button class="workbook-option" data-id="abastecimento">
-                    ⛽ Abastecimento
-                </button>
-
-                <button class="workbook-option" data-id="diario">
-                    📋 Diário de Campo
-                </button>
-
-                <button class="workbook-option" data-id="mensal">
-                    🐄 Mapa Mensal do Rebanho
-                </button>
-
-                <button class="workbook-option" data-id="divergencias">
-                    ⚖ Divergências Diário x Sistema
-                </button>
-
-            </div>
-
-            <div class="modal-actions">
-
-                <button
-                    id="closeWorkbookModal"
-                    class="btn-secondary">
-
-                    Cancelar
+                    👁 Mostrar / Ocultar edição
 
                 </button>
 
-                <button
-                    id="disconnectWorkbook"
-                    class="btn-danger">
+                <button id="resetBtn">
 
-                    Remover vínculo
+                    🗑 Limpar todos os dados
 
                 </button>
 
@@ -201,186 +115,158 @@
 
     </div>
 
-    <!-- =====================================================
-        CONFIRMAR LIMPEZA
-    ====================================================== -->
+</header>
 
-    <div
-        id="confirmOverlay"
-        class="confirm-overlay"
-        style="display:none;">
+<!-- ===========================================================
+FILTROS
+=========================================================== -->
 
-        <div class="confirm-box">
+<section class="filter-bar">
 
-            <p>
+    <div class="filter-card">
 
-                Isso apagará todos os dados.
+        <label>Data Inicial</label>
 
-                Deseja continuar?
-
-            </p>
-
-            <div class="confirm-actions">
-
-                <button
-                    id="confirmCancel"
-                    class="btn-secondary">
-
-                    Cancelar
-
-                </button>
-
-                <button
-                    id="confirmOk"
-                    class="btn-danger">
-
-                    Limpar tudo
-
-                </button>
-
-            </div>
-
-        </div>
+        <input
+            type="date"
+            id="reportStartDate"
+            class="date-input">
 
     </div>
 
-    <!-- =====================================================
-        PAINEL DE CONFIGURAÇÃO
-    ====================================================== -->
+    <div class="filter-card">
 
-    <div
-        id="configPanel"
-        class="panel-config">
+        <label>Data Final</label>
 
-        <h2>Configurações Gerais</h2>
-
-        <div class="config-row" style="display:none;">
-
-            <label>Empresa</label>
-
-            <input
-                id="companyName"
-                type="text">
-
-        </div>
-
-        <div class="config-row">
-
-            <label>Título</label>
-
-            <input
-                id="reportTitle"
-                type="text">
-
-        </div>
-
-        <div class="config-row">
-
-            <label>Período</label>
-
-            <input
-                id="periodLabel"
-                type="text">
-
-        </div>
-
-        <div class="config-row">
-
-            <label>Aviso</label>
-
-            <input
-                id="bannerText"
-                type="text">
-
-        </div>
-
-        <h2>Painéis</h2>
-
-        <div id="panelSelectList"></div>
-
-        <div
-            id="selectWarning"
-            style="display:none;">
-
-        </div>
-
-        <h2>Fazendas</h2>
-
-        <div id="farmList"></div>
-
-        <button
-            id="addFarmBtn"
-            class="add-chip">
-
-            + Adicionar fazenda
-
-        </button>
-
-        <h2>Dias</h2>
-
-        <div id="dayList"></div>
-
-        <button
-            id="addDayBtn"
-            class="add-chip">
-
-            + Adicionar dia
-
-        </button>
+        <input
+            type="date"
+            id="reportEndDate"
+            class="date-input">
 
     </div>
 
-    <!-- =====================================================
-        RELATÓRIO
-    ====================================================== -->
+    <button
+        id="todayBtn"
+        class="btn-secondary">
 
-    <div id="report">
+        📅 Hoje
 
-        <div class="rep-header">
+    </button>
 
-            <div class="rep-header-top">
+    <button
+        id="last7Btn"
+        class="btn-secondary">
 
-                <p
-                    id="titleDisplay"
-                    class="rep-title">
+        📆 Últimos 7 dias
 
-                </p>
+    </button>
 
-                <div class="rep-logo">
+</section>
 
-                    <img
-                        src="logo.png"
-                        id="logoImg"
-                        class="rep-logo-img">
+<!-- ===========================================================
+MODAL PLANILHAS
+=========================================================== -->
 
-                </div>
+<div id="workbookModal" class="modal" style="display:none;">
 
-            </div>
+<div class="modal-content">
 
-            <div class="rep-period-box">
+<h2>Selecionar Planilhas</h2>
 
-                PERÍODO:
-                <span id="periodDisplay"></span>
+<p class="modal-subtitle">
 
-            </div>
+Conecte cada planilha do sistema apenas uma vez.
 
-        </div>
+</p>
 
-        <div
-            id="bannerDisplay"
-            class="rep-banner">
+<div id="workbookList">
 
-        </div>
+<button class="workbook-option" data-id="campo">
 
-        <div
-            id="reportGrid"
-            class="rep-grid">
+🚜 Operações em Campo
 
-        </div>
+</button>
 
-        <div class="rep-bottombar">
+<button class="workbook-option" data-id="abastecimento">
 
-            DISCIPLINA NA INFORMAÇÃO • EXCELÊNCIA NA GESTÃO
+⛽ Abastecimento
+
+</button>
+
+<button class="workbook-option" data-id="diario">
+
+📋 Diário de Campo
+
+</button>
+
+<button class="workbook-option" data-id="mensal">
+
+🐄 Mapa Mensal
+
+</button>
+
+<button class="workbook-option" data-id="divergencias">
+
+⚖ Divergências Diário × Sistema
+
+</button>
+
+</div>
+
+<div class="modal-actions">
+
+<button
+id="closeWorkbookModal"
+class="btn-secondary">
+
+Cancelar
+
+</button>
+
+<button
+id="disconnectWorkbook"
+class="btn-danger">
+
+Remover vínculo
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+   <!-- =====================================================
+CONFIRMAR LIMPEZA
+===================================================== -->
+
+<div id="confirmOverlay" class="confirm-overlay" style="display:none;">
+
+    <div class="confirm-box">
+
+        <h3>Limpar dados</h3>
+
+        <p>
+
+            Todos os dados importados e editados serão apagados.
+
+            Esta ação não poderá ser desfeita.
+
+        </p>
+
+        <div class="confirm-actions">
+
+            <button id="confirmCancel" class="btn-secondary">
+
+                Cancelar
+
+            </button>
+
+            <button id="confirmOk" class="btn-danger">
+
+                🗑 Limpar tudo
+
+            </button>
 
         </div>
 
@@ -388,7 +274,172 @@
 
 </div>
 
+
+<!-- =====================================================
+CONFIGURAÇÕES
+===================================================== -->
+
+<section id="configPanel" class="panel-config">
+
+    <div class="config-card">
+
+        <h2>
+
+            ⚙ Configurações do Relatório
+
+        </h2>
+
+        <div class="config-row" style="display:none;">
+
+            <label>Empresa</label>
+
+            <input id="companyName" type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Título</label>
+
+            <input id="reportTitle" type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Período</label>
+
+            <input id="periodLabel" type="text">
+
+        </div>
+
+        <div class="config-row">
+
+            <label>Mensagem Superior</label>
+
+            <input id="bannerText" type="text">
+
+        </div>
+
+    </div>
+
+
+    <div class="config-card">
+
+        <h2>
+
+            📊 Painéis exibidos
+
+        </h2>
+
+        <div id="panelSelectList" class="panel-select-list"></div>
+
+        <div id="selectWarning" class="select-warning" style="display:none;"></div>
+
+    </div>
+
+
+    <div class="config-card">
+
+        <h2>
+
+            🚜 Fazendas Monitoradas
+
+        </h2>
+
+        <div id="farmList" class="farm-list"></div>
+
+        <button id="addFarmBtn" class="add-chip">
+
+            + Adicionar Fazenda
+
+        </button>
+
+    </div>
+
+
+    <div class="config-card">
+
+        <h2>
+
+            📅 Período do Relatório
+
+        </h2>
+
+        <div id="dayList" class="day-list"></div>
+
+        <button id="addDayBtn" class="add-chip">
+
+            + Adicionar Dia
+
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+RELATÓRIO
+===================================================== -->
+
+<section id="report">
+
+    <div class="rep-header">
+
+        <div class="rep-header-top">
+
+            <div>
+
+                <p id="titleDisplay" class="rep-title"></p>
+
+                <div class="rep-period-box">
+
+                    📅 PERÍODO:
+
+                    <strong id="periodDisplay"></strong>
+
+                </div>
+
+            </div>
+
+            <div class="rep-logo">
+
+                <img
+
+                    src="logo.png"
+
+                    id="logoImg"
+
+                    class="rep-logo-img"
+
+                    alt="Logo">
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="bannerDisplay" class="rep-banner"></div>
+
+
+    <div id="reportGrid" class="rep-grid"></div>
+
+
+    <footer class="rep-bottombar">
+
+        DISCIPLINA NA INFORMAÇÃO • EXCELÊNCIA NA GESTÃO • PRAZO DE ENVIO DIÁRIO
+
+    </footer>
+
+</section>
+
+</div>
+
 <script src="app.js"></script>
 
 </body>
+
 </html>
