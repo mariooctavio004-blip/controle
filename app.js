@@ -97,10 +97,6 @@ function processWorkbook(workbook, fallbackName){
     });
 }
 
-document.getElementById("importExcelBtn")?.addEventListener("click", () => {
-    document.getElementById("excelFiles").click();
-});
-
 document.getElementById("excelFiles")?.addEventListener("change", async (e) => {
 
     const files = [...e.target.files];
@@ -940,3 +936,97 @@ window.addEventListener('beforeprint', swapInputsForCapture);
 window.addEventListener('afterprint', restoreInputsAfterCapture);
 
 loadState();
+/* ============================================================
+   MODAL DAS PLANILHAS
+============================================================ */
+
+const workbookModal = document.getElementById("workbookModal");
+
+const openWorkbookModal = document.getElementById("openWorkbookModal");
+
+const closeWorkbookModal = document.getElementById("closeWorkbookModal");
+
+const connectionIndicator = document.getElementById("connectionIndicator");
+
+const currentWorkbook = document.getElementById("currentWorkbook");
+
+let connectedWorkbook = null;
+
+
+/* Abrir modal */
+
+if(openWorkbookModal){
+
+    openWorkbookModal.addEventListener("click",()=>{
+
+        workbookModal.style.display="flex";
+
+    });
+
+}
+
+
+/* Fechar modal */
+
+if(closeWorkbookModal){
+
+    closeWorkbookModal.addEventListener("click",()=>{
+
+        workbookModal.style.display="none";
+
+    });
+
+}
+
+
+/* Escolher planilha */
+
+document.querySelectorAll(".workbook-option").forEach(btn=>{
+
+    btn.addEventListener("click",()=>{
+
+        connectedWorkbook={
+
+            id:btn.dataset.id,
+
+            nome:btn.innerText
+
+        };
+
+        connectionIndicator.textContent="🟢 Planilha conectada";
+
+        currentWorkbook.textContent=connectedWorkbook.nome;
+
+        workbookModal.style.display="none";
+
+    });
+
+});
+
+
+/* Desvincular */
+
+document.getElementById("disconnectWorkbook")?.addEventListener("click",()=>{
+
+    if(!confirm("Deseja desvincular esta planilha?")) return;
+
+    connectedWorkbook=null;
+
+    connectionIndicator.textContent="🔴 Nenhuma planilha conectada";
+
+    currentWorkbook.textContent="";
+
+});
+
+
+/* Fechar clicando fora */
+
+window.addEventListener("click",(e)=>{
+
+    if(e.target===workbookModal){
+
+        workbookModal.style.display="none";
+
+    }
+
+});
