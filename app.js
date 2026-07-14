@@ -1031,9 +1031,34 @@ workbookInput.accept = ".xlsx,.xls";
 workbookInput.style.display = "none";
 document.body.appendChild(workbookInput);
 
-let connectedWorkbook = null;
+const connectedWorkbooks = {
+    campo: null,
+    abastecimento: null,
+    diario: null,
+    mensal: null,
+    divergencias: null
+};
 let selectedWorkbookType = null;
+function updateConnectionStatus() {
 
+    const list = Object.values(connectedWorkbooks).filter(Boolean);
+
+    if (list.length === 0) {
+        connectionIndicator.innerHTML = "🔴 Nenhuma planilha conectada";
+        currentWorkbook.innerHTML = "Selecione uma planilha";
+        return;
+    }
+
+    connectionIndicator.innerHTML = `🟢 ${list.length} planilha(s) conectada(s)`;
+
+    currentWorkbook.innerHTML = list.map((w, index) => `
+        <div class="connected-item">
+            ✔ ${w.title}<br>
+            <small>${w.fileName}</small>
+        </div>
+    `).join("");
+
+}
 /* ===========================
    Abrir Modal
 =========================== */
@@ -1084,26 +1109,14 @@ workbookInput.addEventListener("change", e => {
         `.workbook-option[data-id="${selectedWorkbookType}"]`
     );
 
-    connectedWorkbook = {
-
-        id: selectedWorkbookType,
-
-        name: option.innerText,
-
-        file
-
-    };
-
-    connectionIndicator.innerHTML = "🟢 Planilha conectada";
-
     currentWorkbook.innerHTML = `
-        <strong>${option.innerText}</strong><br>
-        ${file.name}
-    `;
+    <strong>${option.innerText}</strong><br>
+    ${file.name}
+`;
 
-    workbookModal.style.display = "none";
+workbookModal.style.display = "none";
 
-});
+    
 
 /* ===========================
    Desvincular
@@ -1111,19 +1124,23 @@ workbookInput.addEventListener("change", e => {
 
 disconnectWorkbook?.addEventListener("click", () => {
 
-    if (!connectedWorkbook) return;
+    if (!selectedWorkbookType) {
+        alert("Selecione uma planilha primeiro.");
+        return;
+    }
+
+    if (!connectedWorkbooks[selectedWorkbookType]) {
+        alert("Nenhuma planilha conectada neste painel.");
+        return;
+    }
 
     if (!confirm("Deseja remover esta planilha?")) return;
 
-    connectedWorkbook = null;
-
-    selectedWorkbookType = null;
+    connectedWorkbooks[selectedWorkbookType] = null;
 
     workbookInput.value = "";
 
-    connectionIndicator.innerHTML = "🔴 Nenhuma planilha conectada";
-
-    currentWorkbook.innerHTML = "Selecione uma planilha";
+    updateConnectionStatus();
 
 });
 
