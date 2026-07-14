@@ -23,27 +23,41 @@
 
     </div>
 
-    <div class="toolbar-right">
+    <div class="toolbar-center">
 
         <div class="connection-box">
 
-            <div class="connection-status">
+            <span id="connectionIndicator" class="connection-status">
+                🔴 Nenhuma planilha conectada
+            </span>
 
-                <span id="connectionIndicator">
-                    🔴 Nenhuma planilha conectada
-                </span>
-
-                <span id="currentWorkbook">
-                    Selecione uma planilha
-                </span>
-
-            </div>
-
-            <button class="btn-primary" id="openWorkbookModal">
-                📂 Anexar Planilha
-            </button>
+            <div id="currentWorkbook" class="connection-list"></div>
 
         </div>
+
+    </div>
+
+    <div class="toolbar-right">
+
+        <button class="btn-primary" id="openWorkbookModal">
+            📂 Anexar Planilha
+        </button>
+
+        <button class="btn-secondary" id="processBtn">
+            🔄 Atualizar
+        </button>
+
+        <button class="btn-secondary" id="exportBtn">
+            📸 Exportar
+        </button>
+
+        <button class="btn-config" id="configMenuBtn">
+            ⚙
+        </button>
+
+    </div>
+
+</div>
 
         <div class="filter-bar">
 
@@ -122,6 +136,21 @@
             Escolha uma planilha
 
         </h2>
+      <div id="configMenu" class="config-menu">
+
+    <button id="toggleConfigBtn">
+
+        👁 Mostrar / Ocultar edição
+
+    </button>
+
+    <button id="resetBtn">
+
+        🗑 Limpar todos os dados
+
+    </button>
+
+</div>
 
         <div id="workbookList">
 
