@@ -41,62 +41,218 @@ let state = null;
 // =========================
 
 const importedData = {
-    campo: [],
-    abastecimento: [],
-    diario: [],
-    divergencias: []
+  campo: null,
+  abastecimento: null,
+  diario: null,
+  mensal: null,
+  divergencias: null
 };
 
-document.getElementById("importExcelBtn")?.addEventListener("click", () => {
-    document.getElementById("excelFiles").click();
-});
+const DAILY_IMPORT_KEYS = ['campo', 'abastecimento', 'diario'];
 
-document.getElementById("excelFiles")?.addEventListener("change", async (e) => {
+function normalizeText(value){
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
 
-    const files = [...e.target.files];
+function normalizeCompact(value){
+  return normalizeText(value).replace(/\s+/g, '');
+}
 
-    if (!files.length) return;
+function classifyImportFile(filename){
+  const name = normalizeText(filename);
+  if(name.includes('abaste')) return 'abastecimento';
+  if(name.includes('diario')) return 'diario';
+  if(name.includes('diverg')) return 'divergencias';
+  if(name.includes('mensal') || name.includes('rebanho')) return 'mensal';
+  if(name.includes('opera') || name.includes('campo')) return 'campo';
+  return null;
+}
 
-    for (const file of files) {
+function sheetRowsToJsonRows(rows){
+  return rows.map(row => row.map(cell => String(cell ?? '').trim()));
+}
 
-        const data = await file.arrayBuffer();
+function parseDateLike(value){
+  const text = String(value ?? '').trim();
+  if(!text) return null;
 
-        const workbook = XLSX.read(data, {
-            type: "array"
-        });
+  const br = text.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-]\d{2,4})?\b/);
+  if(br){
+    return `${br[1].padStart(2, '0')}/${br[2].padStart(2, '0')}`;
+  }
 
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const parsed = new Date(text);
+  if(!Number.isNaN(parsed.getTime())){
+    return parsed.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  }
 
-        const json = XLSX.utils.sheet_to_json(sheet, {
-            header: 1,
-            raw: false
-        });
+  return null;
+}
 
-        const name = file.name.toLowerCase();
+function getFarmIndexFromRow(row){
+  const cells = row.map(normalizeCompact);
+  return state.farms.findIndex(farm => {
+    const farmNorm = normalizeCompact(farm);
+    return farmNorm && cells.some(cell => cell && (cell === farmNorm || cell.includes(farmNorm) || farmNorm.includes(cell)));
+  });
+}
 
-        if (name.includes("opera")) {
+function cellToStatus(value){
+  const text = normalizeText(value);
+  if(!text) return 'no';
+  if(['ok', 'sim', 's', 'recebido', 'enviado', 'entregue', 'lancado', 'feito', 'concluido', '1', 'true', 'x'].includes(text)) return 'ok';
+  if(text.includes('recebid') || text.includes('enviad') || text.includes('concluid') || text.includes('lancad')) return 'ok';
+  if(text.includes('compra') || text.includes('n a') || text.includes('nao se aplica') || text === '-') return 'blank';
+  if(text.includes('pend') || text.includes('nao') || text.includes('falta') || text.includes('atras')) return 'no';
+  const num = Number(String(value).replace(',', '.'));
+  if(!Number.isNaN(num)) return num > 0 ? 'ok' : 'no';
+  return 'ok';
+}
 
-            importedData.campo = json;
+function findDateColumns(rows){
+  const columns = {};
+  rows.slice(0, 12).forEach(row => {
+    row.forEach((cell, idx) => {
+      const label = parseDateLike(cell);
+      if(label && state.days.includes(label)) columns[label] = idx;
+    });
+  });
+  return columns;
+}
 
-        } else if (name.includes("abaste")) {
+function updateDailyPanelFromRows(panelKey, rows){
+  if(!rows || !rows.length) return 0;
+  const dateColumns = findDateColumns(rows);
+  let updates = 0;
 
-            importedData.abastecimento = json;
+  rows.forEach(row => {
+    const farmIdx = getFarmIndexFromRow(row);
+    if(farmIdx < 0) return;
 
-        } else if (name.includes("diario")) {
+    state.days.forEach((day, dayIdx) => {
+      const colIdx = dateColumns[day];
+      if(colIdx === undefined) return;
+      state.data[panelKey][farmIdx][dayIdx] = cellToStatus(row[colIdx]);
+      updates++;
+    });
+  });
 
-            importedData.diario = json;
+  return updates;
+}
 
-        } else if (name.includes("diverg")) {
+function updateMonthlyFromRows(rows){
+  if(!rows || !rows.length) return 0;
+  let updates = 0;
+  rows.forEach(row => {
+    const farmIdx = getFarmIndexFromRow(row);
+    if(farmIdx < 0) return;
+    const statusCell = row.find((cell, idx) => idx > 0 && String(cell ?? '').trim());
+    if(statusCell === undefined) return;
+    state.monthly[farmIdx] = cellToStatus(statusCell);
+    updates++;
+  });
+  return updates;
+}
 
-            importedData.divergencias = json;
+function findHeaderColumns(rows){
+  const aliases = {
+    nd: ['nasc diario', 'nascimento diario', 'nascimentos diario'],
+    ns: ['nasc sistema', 'nascimento sistema', 'nascimentos sistema'],
+    md: ['mortes diario', 'morte diario', 'mort diario'],
+    ms: ['mortes sistema', 'morte sistema', 'mort sistema']
+  };
+  const columns = {};
+  rows.slice(0, 15).forEach(row => {
+    row.forEach((cell, idx) => {
+      const text = normalizeText(cell);
+      Object.entries(aliases).forEach(([field, names]) => {
+        if(columns[field] === undefined && names.some(name => text.includes(name))) columns[field] = idx;
+      });
+    });
+  });
+  return columns;
+}
 
-        }
+function updateDivergenciasFromRows(rows){
+  if(!rows || !rows.length) return 0;
+  const columns = findHeaderColumns(rows);
+  let updates = 0;
+  rows.forEach(row => {
+    const farmIdx = getFarmIndexFromRow(row);
+    if(farmIdx < 0) return;
+    ['nd', 'ns', 'md', 'ms'].forEach(field => {
+      const colIdx = columns[field];
+      if(colIdx === undefined) return;
+      const raw = String(row[colIdx] ?? '').replace(/[^0-9-]/g, '');
+      state.diverg[farmIdx][field] = raw;
+      updates++;
+    });
+  });
+  return updates;
+}
 
+function applyImportedData(){
+  ensureData();
+  const counts = [];
+  DAILY_IMPORT_KEYS.forEach(key => {
+    const updated = updateDailyPanelFromRows(key, importedData[key]);
+    if(updated) counts.push(`${PANEL_DEFS.find(p => p.key === key).title}: ${updated}`);
+  });
+
+  const monthlyUpdated = updateMonthlyFromRows(importedData.mensal);
+  if(monthlyUpdated) counts.push(`Mapa Mensal: ${monthlyUpdated}`);
+
+  const divergUpdated = updateDivergenciasFromRows(importedData.divergencias);
+  if(divergUpdated) counts.push(`Divergências: ${divergUpdated}`);
+
+  renderAll();
+  saveState();
+  showInlineWarning(counts.length ? `Planilhas importadas. Campos atualizados: ${counts.join(' | ')}` : 'Nenhum dado compatível foi encontrado nas planilhas importadas.');
+}
+
+async function importExcelFiles(files){
+  for(const file of files){
+    const key = classifyImportFile(file.name);
+    if(!key){
+      showInlineWarning(`Não reconheci o tipo da planilha: ${file.name}`);
+      continue;
     }
 
-    preencherSistema();
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type:'array', cellDates:true });
+    const rows = [];
+    workbook.SheetNames.forEach(sheetName => {
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
+      rows.push(...sheetRowsToJsonRows(json));
+    });
+    importedData[key] = rows;
+  }
 
+  applyImportedData();
+}
+
+function preencherSistema(){
+  applyImportedData();
+}
+
+document.getElementById('importExcelBtn')?.addEventListener('click', () => {
+  document.getElementById('excelFiles').click();
 });
+
+document.getElementById('excelFiles')?.addEventListener('change', async e => {
+  const files = [...e.target.files];
+  if(!files.length) return;
+  await importExcelFiles(files);
+  e.target.value = '';
+});
+
+document.getElementById('processBtn')?.addEventListener('click', preencherSistema);
 const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
 function normalizeStatus(v){
   if(v === true) return 'ok';
@@ -580,53 +736,33 @@ window.addEventListener('afterprint', restoreInputsAfterCapture);
 // ===========================================
 
 function validarImportacao(){
+  const labels = {
+    campo: 'Operações em Campo',
+    abastecimento: 'Abastecimento',
+    diario: 'Diário',
+    mensal: 'Mapa Mensal',
+    divergencias: 'Divergências'
+  };
+  const importadas = Object.entries(importedData)
+    .filter(([, rows]) => Array.isArray(rows) && rows.length)
+    .map(([key]) => labels[key]);
 
-    const faltando = [];
+  if(!importadas.length){
+    alert('Nenhuma planilha foi importada ainda.');
+    return;
+  }
 
-    if(!excelData.operacoes)
-        faltando.push("Operações");
-
-    if(!excelData.abastecimento)
-        faltando.push("Abastecimento");
-
-    if(!excelData.diario)
-        faltando.push("Diário");
-
-    if(!excelData.divergencias)
-        faltando.push("Divergências");
-
-    if(faltando.length){
-
-        alert(
-            "Faltam as seguintes planilhas:\n\n" +
-            faltando.join("\n")
-        );
-
-        return;
-
-    }
-
-    alert("Todas as planilhas foram importadas com sucesso.");
-
-    prepararDados();
-
+  alert('Planilhas importadas:\n\n' + importadas.join('\n'));
+  prepararDados();
 }
 
 function prepararDados(){
-
-    console.clear();
-
-    console.log("Operações");
-    console.table(excelData.operacoes);
-
-    console.log("Abastecimento");
-    console.table(excelData.abastecimento);
-
-    console.log("Diário");
-    console.table(excelData.diario);
-
-    console.log("Divergências");
-    console.table(excelData.divergencias);
-
+  console.clear();
+  Object.entries(importedData).forEach(([key, rows]) => {
+    if(Array.isArray(rows) && rows.length){
+      console.log(key);
+      console.table(rows);
+    }
+  });
 }
 loadState();
