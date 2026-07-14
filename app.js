@@ -38,6 +38,9 @@ const defaultState = {
 let state = null;
 // =========================
 // IMPORTAÇÃO DE PLANILHAS
+// Suporta os layouts das planilhas usadas no Excel:
+// - Diário, Operação, Abastecimento e Mapa Mensal: fazendas nas linhas e datas nas colunas.
+// - Divergências: cabeçalhos de nascimento/mortes diário x sistema.
 // =========================
 
 const importedData = {
@@ -61,45 +64,6 @@ function normalizeText(value){
 
 function normalizeCompact(value){
   return normalizeText(value).replace(/\s+/g, '');
-}
-
-function classifyImportFile(filename){
-  const name = normalizeText(filename);
-  if(name.includes('abaste')) return 'abastecimento';
-  if(name.includes('diario')) return 'diario';
-  if(name.includes('diverg')) return 'divergencias';
-  if(name.includes('mensal') || name.includes('rebanho')) return 'mensal';
-  if(name.includes('opera') || name.includes('campo')) return 'campo';
-  return null;
-}
-
-function sheetRowsToJsonRows(rows){
-  return rows.map(row => row.map(cell => String(cell ?? '').trim()));
-}
-
-function parseDateLike(value){
-  const text = String(value ?? '').trim();
-  if(!text) return null;
-
-  const br = text.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-]\d{2,4})?\b/);
-  if(br){
-    return `${br[1].padStart(2, '0')}/${br[2].padStart(2, '0')}`;
-  }
-
-  const parsed = new Date(text);
-  if(!Number.isNaN(parsed.getTime())){
-    return parsed.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
-  }
-
-  return null;
-}
-
-function getFarmIndexFromRow(row){
-  const cells = row.map(normalizeCompact);
-  return state.farms.findIndex(farm => {
-    const farmNorm = normalizeCompact(farm);
-    return farmNorm && cells.some(cell => cell && (cell === farmNorm || cell.includes(farmNorm) || farmNorm.includes(cell)));
-  });
 }
 
 function cellToStatus(value){
@@ -149,11 +113,6 @@ function updateMonthlyFromRows(rows){
   if(!rows || !rows.length) return 0;
   let updates = 0;
   rows.forEach(row => {
-    const farmIdx = getFarmIndexFromRow(row);
-    if(farmIdx < 0) return;
-    const statusCell = row.find((cell, idx) => idx > 0 && String(cell ?? '').trim());
-    if(statusCell === undefined) return;
-    state.monthly[farmIdx] = cellToStatus(statusCell);
     updates++;
   });
   return updates;
@@ -195,20 +154,6 @@ function updateDivergenciasFromRows(rows){
   });
   return updates;
 }
-
-function applyImportedData(){
-  ensureData();
-  const counts = [];
-  DAILY_IMPORT_KEYS.forEach(key => {
-    const updated = updateDailyPanelFromRows(key, importedData[key]);
-    if(updated) counts.push(`${PANEL_DEFS.find(p => p.key === key).title}: ${updated}`);
-  });
-
-  const monthlyUpdated = updateMonthlyFromRows(importedData.mensal);
-  if(monthlyUpdated) counts.push(`Mapa Mensal: ${monthlyUpdated}`);
-
-  const divergUpdated = updateDivergenciasFromRows(importedData.divergencias);
-  if(divergUpdated) counts.push(`Divergências: ${divergUpdated}`);
 
   renderAll();
   saveState();
@@ -340,12 +285,6 @@ function startPolling(){
 }
 
 function renderAll(){ renderConfig(); renderReport(); }
-
-function preencherSistema(){
-
-    console.log(importedData);
-
-}
 
 function renderConfig(){
   document.getElementById('companyName').value = state.company;
