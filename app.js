@@ -32,7 +32,11 @@ const defaultState = {
   selected: ['campo','abastecimento','diario','mensal'],
   data: {},       // data[panelKey][farmIdx][dayIdx] = bool  (daily panels)
   monthly: {},    // monthly[farmIdx] = bool
-  diverg: {}      // diverg[farmIdx] = { nd, ns, md, ms } numbers
+  diverg: {},     // diverg[farmIdx] = { nd, ns, md, ms } numbers
+  sharepointUrl: '',   // link da planilha online anexada (fica salvo até ser removido)
+  lastSync: '',        // horário da última sincronização com a planilha online
+  filterStart: '',     // data inicial (YYYY-MM-DD) do período mostrado nos painéis
+  filterEnd: ''         // data final (YYYY-MM-DD) do período mostrado nos painéis
 };
 
 let state = null;
@@ -70,6 +74,29 @@ function classifySheetName(name){
     return null;
 }
 
+// Lê todas as abas de um workbook já carregado e joga o conteúdo reconhecido
+// dentro de importedData. Usado tanto para arquivo local quanto para planilha
+// baixada de um link online (SharePoint/OneDrive).
+function processWorkbook(workbook, fallbackName){
+    workbook.SheetNames.forEach(sheetName => {
+        let key = classifySheetName(sheetName);
+        // Se o arquivo tiver uma única aba com nome genérico, tenta
+        // identificar o painel pelo nome do próprio arquivo.
+        if (!key && workbook.SheetNames.length === 1) {
+            key = classifySheetName(fallbackName);
+        }
+        if (!key) return;
+
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            raw: false,
+            dateNF: 'dd/mm'
+        });
+        importedData[key] = json;
+    });
+}
+
 document.getElementById("importExcelBtn")?.addEventListener("click", () => {
     document.getElementById("excelFiles").click();
 });
@@ -81,40 +108,119 @@ document.getElementById("excelFiles")?.addEventListener("change", async (e) => {
     if (!files.length) return;
 
     for (const file of files) {
-
         const data = await file.arrayBuffer();
-
         const workbook = XLSX.read(data, {
             type: "array",
             cellDates: true
         });
-
         // Lê TODAS as abas do arquivo (a sua planilha tem as 4 tabelas em
         // abas separadas dentro de um único arquivo .xlsx).
-        workbook.SheetNames.forEach(sheetName => {
-            let key = classifySheetName(sheetName);
-            // Se o arquivo tiver uma única aba com nome genérico, tenta
-            // identificar o painel pelo nome do próprio arquivo.
-            if (!key && workbook.SheetNames.length === 1) {
-                key = classifySheetName(file.name);
-            }
-            if (!key) return;
-
-            const sheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(sheet, {
-                header: 1,
-                raw: false,
-                dateNF: 'dd/mm'
-            });
-            importedData[key] = json;
-        });
-
+        processWorkbook(workbook, file.name);
     }
 
     e.target.value = ''; // permite importar o mesmo arquivo de novo depois
 
     preencherSistema();
 
+});
+
+// =========================
+// PLANILHA ONLINE (SHAREPOINT/ONEDRIVE)
+// =========================
+
+// Tenta transformar um link de compartilhamento do SharePoint/OneDrive em um
+// link de download direto (adiciona "download=1" na URL). Isso só funciona
+// se o arquivo estiver compartilhado como "Qualquer pessoa com o link" e se o
+// SharePoint permitir o acesso direto do navegador (CORS); alguns tenants
+// bloqueiam esse acesso, e nesse caso a sincronização automática falha e um
+// aviso aparece na tela.
+function toDirectDownloadUrl(url){
+    try{
+        const u = new URL(url);
+        const host = u.hostname.toLowerCase();
+        if(host.includes('sharepoint.com') || host.includes('1drv.ms') || host.includes('onedrive.live.com')){
+            if(!u.searchParams.has('download')) u.searchParams.set('download', '1');
+        }
+        return u.toString();
+    }catch(e){
+        return url;
+    }
+}
+
+function renderAttachStatus(isError){
+    const icon = document.getElementById('attachStatusIcon');
+    const text = document.getElementById('attachStatusText');
+    const removeBtn = document.getElementById('removeAttachBtn');
+    const urlInput = document.getElementById('sharepointUrl');
+    const info = document.querySelector('.attach-info');
+    if(!icon || !text || !removeBtn || !urlInput) return;
+
+    if(state.sharepointUrl){
+        if(document.activeElement !== urlInput) urlInput.value = state.sharepointUrl;
+        removeBtn.style.display = '';
+        info.classList.toggle('is-error', !!isError);
+        icon.textContent = isError ? '⚠️' : '🔗';
+        if(isError){
+            text.textContent = 'Não foi possível sincronizar a planilha anexada agora. Tentando de novo automaticamente.';
+        } else {
+            text.textContent = 'Planilha anexada' + (state.lastSync ? (' — última sincronização: ' + state.lastSync) : ' — sincronizando...') + '.';
+        }
+    } else {
+        removeBtn.style.display = 'none';
+        info.classList.remove('is-error');
+        icon.textContent = '📎';
+        text.textContent = 'Nenhuma planilha online anexada.';
+    }
+}
+
+// Baixa e reprocessa a planilha anexada. silent=true evita mostrar aviso de
+// erro repetido nas sincronizações automáticas de fundo.
+async function syncSharepointSheet(silent){
+    const url = state.sharepointUrl;
+    if(!url) return;
+    try{
+        const direct = toDirectDownloadUrl(url);
+        const res = await fetch(direct, { mode: 'cors' });
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const buffer = await res.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+        processWorkbook(workbook, 'planilha');
+        state.lastSync = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+        preencherSistema(); // já faz ensureData + renderAll + saveState + aviso do que foi importado
+        renderAttachStatus(false);
+    }catch(e){
+        console.error(e);
+        renderAttachStatus(true);
+        if(!silent){
+            showInlineWarning('Não foi possível baixar a planilha do link informado. Confira se ela está compartilhada como "Qualquer pessoa com o link pode visualizar" — alguns links do SharePoint bloqueiam o acesso direto do navegador (CORS) e, nesse caso, não é possível sincronizar automaticamente. Detalhe: ' + e.message);
+        }
+    }
+}
+
+let sharepointSyncTimer = null;
+function startSharepointAutoSync(){
+    clearInterval(sharepointSyncTimer);
+    sharepointSyncTimer = setInterval(() => {
+        if(state.sharepointUrl) syncSharepointSheet(true);
+    }, 3 * 60 * 1000); // ressincroniza a cada 3 minutos
+}
+
+document.getElementById('attachSharepointBtn')?.addEventListener('click', async () => {
+    const val = document.getElementById('sharepointUrl').value.trim();
+    if(!val){ showInlineWarning('Cole o link da planilha antes de anexar.'); return; }
+    state.sharepointUrl = val;
+    state.lastSync = '';
+    saveState();
+    renderAttachStatus(false);
+    await syncSharepointSheet(false);
+});
+
+document.getElementById('removeAttachBtn')?.addEventListener('click', () => {
+    state.sharepointUrl = '';
+    state.lastSync = '';
+    document.getElementById('sharepointUrl').value = '';
+    renderAttachStatus(false);
+    saveState();
 });
 const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
 function normalizeStatus(v){
@@ -144,6 +250,73 @@ function ensureData(){
   state.selected = state.selected.slice(0,4);
 }
 
+// =========================
+// FILTRO DE PERÍODO (mostrar só os últimos N dias / um intervalo)
+// =========================
+
+// Converte um rótulo de coluna tipo "01/07" ou "01/07/2026" em Date. Se não
+// conseguir entender o formato, retorna null (a coluna some do cálculo de
+// filtro, mas continua sendo mostrada por segurança).
+function parseDayLabel(label){
+    const m = String(label == null ? '' : label).trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+    if(!m) return null;
+    const day = parseInt(m[1], 10), month = parseInt(m[2], 10) - 1;
+    let year = m[3] ? parseInt(m[3], 10) : new Date().getFullYear();
+    if(year < 100) year += 2000;
+    const d = new Date(year, month, day);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function isoToDate(iso){
+    if(!iso) return null;
+    const d = new Date(iso + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function dateToISO(d){
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+}
+
+// Retorna os índices de state.days que devem aparecer nos painéis, já
+// aplicando o filtro de período (campos de data ao lado de "Importar
+// Planilhas"). Os dados de todos os dias continuam salvos normalmente —
+// só a exibição é filtrada aqui.
+function getVisibleDayIndexes(){
+    const allIdx = state.days.map((_, i) => i);
+    let endDate = isoToDate(state.filterEnd);
+    let startDate = isoToDate(state.filterStart);
+
+    if(!endDate && !startDate) return allIdx; // sem filtro definido: mostra tudo
+
+    const parsedDays = state.days.map(parseDayLabel);
+    const allParsed = parsedDays.every(d => d !== null);
+
+    // Se as colunas não estiverem no formato DD/MM, não dá pra comparar datas
+    // com segurança. Nesse caso, só a data final é usada para pegar as
+    // últimas 7 colunas (por posição).
+    if(!allParsed){
+        if(endDate && !startDate) return allIdx.slice(Math.max(0, allIdx.length - 7));
+        return allIdx;
+    }
+
+    if(endDate && !startDate){
+        startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 6); // janela padrão de 7 dias
+    }
+    if(startDate && !endDate){
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+    }
+
+    const filtered = allIdx.filter(i => {
+        const d = parsedDays[i];
+        if(!d) return true;
+        return d >= startDate && d <= endDate;
+    });
+    return filtered.length ? filtered : allIdx;
+}
+
 let lastKnownJSON = null;
 
 async function loadState(){
@@ -157,6 +330,8 @@ async function loadState(){
   lastKnownJSON = JSON.stringify(state);
   renderAll();
   startPolling();
+  startSharepointAutoSync();
+  if(state.sharepointUrl) syncSharepointSheet(true); // sincroniza assim que a página abre
 }
 
 let saveTimer = null;
@@ -202,7 +377,16 @@ function startPolling(){
   }, 6000);
 }
 
-function renderAll(){ renderConfig(); renderReport(); }
+function renderAll(){ renderConfig(); renderReport(); renderAttachStatus(); syncDateInputs(); }
+
+// Mantém os campos de data (topo) sincronizados com o state, sem atrapalhar
+// enquanto a pessoa está digitando neles.
+function syncDateInputs(){
+  const startInp = document.getElementById('reportStartDate');
+  const endInp = document.getElementById('reportEndDate');
+  if(startInp && document.activeElement !== startInp) startInp.value = state.filterStart || '';
+  if(endInp && document.activeElement !== endInp) endInp.value = state.filterEnd || '';
+}
 
 // Calcula distância de edição entre duas strings, usada para casar nomes de
 // fazenda com pequenas diferenças de digitação (ex.: "ESTACIA" x "ESTANCIA").
@@ -487,20 +671,21 @@ function escapeHtml(s){
 }
 
 function buildDailyCard(panel){
+  const visible = getVisibleDayIndexes(); // índices de state.days a exibir, já filtrados pelo período escolhido
   let rows = '';
-  const perDayPend = state.days.map(()=>0);
+  const perDayPend = visible.map(()=>0);
   let totalPendAll = 0;
   state.farms.forEach((farm, fi)=>{
     let cells = '', totalPend = 0;
-    state.days.forEach((day, di)=>{
+    visible.forEach((di, col)=>{
       const status = normalizeStatus(state.data[panel.key][fi] && state.data[panel.key][fi][di]);
-      if(status === 'no'){ totalPend++; perDayPend[di]++; }
+      if(status === 'no'){ totalPend++; perDayPend[col]++; }
       cells += `<td>${iconHTML(status, `data-panel="${panel.key}" data-farm="${fi}" data-day="${di}"`)}</td>`;
     });
     totalPendAll += totalPend;
     rows += `<tr><td class="farm-col">${escapeHtml(farm)}</td>${cells}<td class="rep-total pend-col">${totalPend}</td></tr>`;
   });
-  const dayHeaders = state.days.map(d=>`<th>${escapeHtml(d)}</th>`).join('');
+  const dayHeaders = visible.map(di=>`<th>${escapeHtml(state.days[di])}</th>`).join('');
   const dayFooterCells = perDayPend.map(n=>`<td>${n}</td>`).join('');
   return `
     <div class="rep-card-head">${panelIconHTML(panel.key)}<span>${escapeHtml(panel.title)}</span></div>
