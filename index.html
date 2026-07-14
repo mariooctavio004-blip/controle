@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status de Envio - Fazendas</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <div class="toolbar">
+    <h1>Gerador de Status de Envio</h1>
+    <div class="actions">
+      <span class="status-save" id="saveStatus">Dados compartilhados — carregando...</span>
+      <button class="btn-ghost" id="resetBtn">Limpar tudo</button>
+      <button class="btn-secondary" id="toggleConfigBtn">Ocultar edição</button>
+      <button class="btn-primary" id="exportBtn">Baixar imagem</button>
+    </div>
+  </div>
+
+  <div id="confirmOverlay" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box">
+      <p>Isso vai apagar todos os dados salvos e voltar ao exemplo padrão. Continuar?</p>
+      <div class="confirm-actions">
+        <button class="btn-secondary" id="confirmCancel">Cancelar</button>
+        <button class="btn-danger" id="confirmOk">Limpar tudo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-config" id="configPanel">
+    <h2>Configurações gerais</h2>
+    <div class="config-row" style="display:none;">
+      <label>Empresa</label>
+      <input type="text" id="companyName" placeholder="Nelore Cometa">
+    </div>
+    <div class="config-row">
+      <label>Título do quadro</label>
+      <input type="text" id="reportTitle" placeholder="Status de Envio dos Controles - Fazendas">
+    </div>
+    <div class="config-row">
+      <label>Período (topo)</label>
+      <input type="text" id="periodLabel" placeholder="01/07 A 04/07">
+    </div>
+    <div class="config-row">
+      <label>Aviso do topo</label>
+      <input type="text" id="bannerText" placeholder="Contamos com todos para mantermos a disciplina e a qualidade das informações!">
+    </div>
+
+    <h2 style="margin-top:18px;">Quais painéis entram na imagem (escolha até 4)</h2>
+    <div class="panel-select-list" id="panelSelectList"></div>
+    <div class="select-warning" id="selectWarning" style="display:none;">Você já escolheu 4 painéis. Desmarque um para trocar.</div>
+
+    <h2 style="margin-top:18px;">Fazendas</h2>
+    <div class="farm-list" id="farmList"></div>
+    <button class="add-chip" id="addFarmBtn">+ Adicionar fazenda</button>
+
+    <h2 style="margin-top:18px;">Dias do período (colunas dos painéis diários)</h2>
+    <div class="day-list" id="dayList"></div>
+    <button class="add-chip" id="addDayBtn">+ Adicionar dia</button>
+
+    <p style="font-size:12px;color:var(--muted);margin-top:14px;">
+      Nos painéis com dias, clique no círculo para alternar: vermelho (pendente) → branco (não enviado, ex: em compra) → verde (recebido). No painel de Divergências, digite os números — a diferença é calculada sozinha e a linha TOTAL soma as diferenças de todas as fazendas.
+    </p>
+    <p style="font-size:12px;color:var(--muted);margin-top:6px;">
+      <strong>Compartilhado:</strong> quem também abrir esta ferramenta pelo mesmo link vê e edita os mesmos dados, atualizados automaticamente a cada poucos segundos.
+    </p>
+  </div>
+
+  <div id="report">
+    <div class="rep-header">
+      <svg class="rep-header-accent" viewBox="0 0 220 130" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,92 C42,42 92,12 220,0 L220,15 C100,26 56,56 15,100 C10,109 4,113 0,111 Z" fill="var(--gold)"/>
+      </svg>
+      <div class="rep-header-top">
+        <p class="rep-title" id="titleDisplay">STATUS DE ENVIO DOS CONTROLES - FAZENDAS</p>
+        <div class="rep-logo">
+          <img src="logo.png" alt="Nelore Cometa" class="rep-logo-img" id="logoImg">
+        </div>
+      </div>
+      <div class="rep-period-box">
+        <span class="rep-period-icon">&#128197;</span>
+        <span>PERÍODO: <span id="periodDisplay">01/07 A 04/07</span></span>
+      </div>
+    </div>
+
+    <div class="rep-banner" id="bannerDisplay">
+      Contamos com todos para mantermos a disciplina e a qualidade das informações!
+    </div>
+
+    <div class="rep-grid" id="reportGrid"></div>
+
+    <div class="rep-bottombar">
+      <svg class="rep-bottombar-accent" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,45 C120,12 260,55 420,26 C500,10 560,30 600,16 L600,60 L0,60 Z" fill="var(--gold)" fill-opacity="0.35"/>
+      </svg>
+      <span class="rep-bottombar-text">DISCIPLINA NA INFORMAÇÃO, EXCELÊNCIA NA GESTÃO &nbsp;|&nbsp; PRAZO DE ENVIO DIÁRIO</span>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
