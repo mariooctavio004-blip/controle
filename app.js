@@ -575,5 +575,58 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
 
 window.addEventListener('beforeprint', swapInputsForCapture);
 window.addEventListener('afterprint', restoreInputsAfterCapture);
+// ===========================================
+// VALIDAÇÃO DAS PLANILHAS
+// ===========================================
 
+function validarImportacao(){
+
+    const faltando = [];
+
+    if(!excelData.operacoes)
+        faltando.push("Operações");
+
+    if(!excelData.abastecimento)
+        faltando.push("Abastecimento");
+
+    if(!excelData.diario)
+        faltando.push("Diário");
+
+    if(!excelData.divergencias)
+        faltando.push("Divergências");
+
+    if(faltando.length){
+
+        alert(
+            "Faltam as seguintes planilhas:\n\n" +
+            faltando.join("\n")
+        );
+
+        return;
+
+    }
+
+    alert("Todas as planilhas foram importadas com sucesso.");
+
+    prepararDados();
+
+}
+
+function prepararDados(){
+
+    console.clear();
+
+    console.log("Operações");
+    console.table(excelData.operacoes);
+
+    console.log("Abastecimento");
+    console.table(excelData.abastecimento);
+
+    console.log("Diário");
+    console.table(excelData.diario);
+
+    console.log("Divergências");
+    console.table(excelData.divergencias);
+
+}
 loadState();
