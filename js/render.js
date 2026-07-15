@@ -644,6 +644,10 @@ function renderConfig() {
     renderPanelSelection();
     renderFarmList();
     renderDayList();
+
+    if (typeof ensureManualEntryButton === "function") {
+        ensureManualEntryButton();
+    }
 }
 
 
@@ -1005,9 +1009,19 @@ function renderReport() {
 
         card.dataset.panel = panel.key;
 
+        const dailyPanelHasData =
+            panel.type !== "daily" ||
+            state.manualEntryEnabled ||
+            Boolean(
+                state.dailyDataReady?.[panel.key]
+            );
+
         if (
             panel.type === "daily" &&
-            visibleDayIndexes.length === 0
+            (
+                visibleDayIndexes.length === 0 ||
+                !dailyPanelHasData
+            )
         ) {
             card.innerHTML = `
                 <div class="rep-card-head">
