@@ -159,6 +159,19 @@ function createUniqueDayLabel() {
 }
 
 function bindFarmAndDayButtons() {
+    const addDayButton =
+        document.getElementById("addDayBtn");
+
+    if (addDayButton) {
+        addDayButton.type = "button";
+
+        [...addDayButton.children].forEach(child => {
+            if (!String(child.textContent || "").trim()) {
+                child.remove();
+            }
+        });
+    }
+
     bindEvent("addFarmBtn", "click", () => {
         if (!Array.isArray(state.farms)) {
             state.farms = [];
@@ -225,40 +238,74 @@ function ensureManualEntryButton() {
 
     if (!addDayButton) return null;
 
+    /*
+     * Corrige estruturas antigas que deixaram um botão vazio
+     * ao lado de “Adicionar dia”.
+     */
+    const parent = addDayButton.parentElement;
+
+    if (parent) {
+        [...parent.children].forEach(element => {
+            const isAllowed =
+                element === addDayButton ||
+                element.id === "enableManualEntryBtn";
+
+            const isEmpty =
+                !String(element.textContent || "").trim() &&
+                !element.querySelector?.("input, img, svg");
+
+            if (!isAllowed && isEmpty) {
+                element.remove();
+            }
+        });
+    }
+
     let button =
         document.getElementById("enableManualEntryBtn");
 
-    if (button) return button;
+    if (!button) {
+        button = document.createElement("button");
+        button.id = "enableManualEntryBtn";
+        button.type = "button";
+        button.className =
+            "add-chip manual-entry-btn";
 
-    let actions =
-        addDayButton.closest(".day-actions");
-
-    if (!actions) {
-        actions = document.createElement("div");
-        actions.className = "day-actions";
-
-        addDayButton.parentNode.insertBefore(
-            actions,
-            addDayButton
+        addDayButton.insertAdjacentElement(
+            "afterend",
+            button
         );
-
-        actions.appendChild(addDayButton);
     }
 
-    button = document.createElement("button");
-    button.id = "enableManualEntryBtn";
-    button.type = "button";
-    button.className =
-        "add-chip manual-entry-btn";
-    button.textContent =
-        "✏️ Preencher manualmente";
-
-    actions.appendChild(button);
+    updateManualEntryButton();
 
     return button;
 }
 
-function enableManualEntry() {
+function updateManualEntryButton() {
+    const button =
+        document.getElementById("enableManualEntryBtn");
+
+    if (!button) return;
+
+    const enabled =
+        Boolean(state?.manualEntryEnabled);
+
+    button.classList.toggle(
+        "is-active",
+        enabled
+    );
+
+    button.textContent = enabled
+        ? "↩️ Ocultar preenchimento manual"
+        : "✏️ Preencher manualmente";
+
+    button.setAttribute(
+        "aria-pressed",
+        enabled ? "true" : "false"
+    );
+}
+
+function toggleManualEntry() {
     if (
         !Array.isArray(state.days) ||
         !state.days.length
@@ -266,72 +313,44 @@ function enableManualEntry() {
         showInlineWarning(
             "Escolha Hoje, Últimos 7 dias ou informe um período antes de preencher manualmente."
         );
+
         return;
     }
 
-    state.manualEntryEnabled = true;
-
-    if (
-        !state.dailyDataReady ||
-        typeof state.dailyDataReady !== "object"
-    ) {
-        state.dailyDataReady = {
-            campo: false,
-            abastecimento: false,
-            diario: false
-        };
-    }
-
-    ["campo", "abastecimento", "diario"].forEach(key => {
-        state.dailyDataReady[key] = true;
-
-        if (!state.data[key]) {
-            state.data[key] = {};
-        }
-
-        state.farms.forEach((farm, farmIndex) => {
-            if (!state.data[key][farmIndex]) {
-                state.data[key][farmIndex] = {};
-            }
-
-            state.days.forEach((day, dayIndex) => {
-                const current =
-                    state.data[key][farmIndex][dayIndex];
-
-                if (
-                    current !== "ok" &&
-                    current !== "no" &&
-                    current !== "blank"
-                ) {
-                    state.data[key][farmIndex][dayIndex] =
-                        "blank";
-                }
-            });
-        });
-    });
+    state.manualEntryEnabled =
+        !Boolean(state.manualEntryEnabled);
 
     ensureData();
     renderAll();
     saveState();
 
+    updateManualEntryButton();
+
     showInlineWarning(
-        "Preenchimento manual ativado. Clique nos círculos para alterar o status."
+        state.manualEntryEnabled
+            ? "Preenchimento manual ativado. Clique nos círculos para alterar o status."
+            : "Preenchimento manual ocultado."
     );
 }
 
 function bindManualEntryEvents() {
-    const button = ensureManualEntryButton();
+    const button =
+        ensureManualEntryButton();
 
     if (!button) return;
 
-    if (button.dataset.boundManualEntry === "true") {
+    if (
+        button.dataset.boundManualEntry === "true"
+    ) {
+        updateManualEntryButton();
         return;
     }
 
     button.dataset.boundManualEntry = "true";
+
     button.addEventListener(
         "click",
-        enableManualEntry
+        toggleManualEntry
     );
 }
 
