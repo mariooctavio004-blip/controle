@@ -418,15 +418,11 @@ function clearDateFilter(
 ============================================================ */
 
 function filterToday() {
-    /*
-     * Usa a data mais recente existente no relatório.
-     * Caso não existam datas válidas, usa a data atual.
-     */
-    const referenceDate =
-        getLatestAvailableDayDate() ||
-        new Date();
+    const today = new Date();
 
-    const iso = dateToISO(referenceDate);
+    today.setHours(0, 0, 0, 0);
+
+    const iso = dateToISO(today);
 
     applyDateFilter(
         iso,
@@ -439,12 +435,11 @@ function filterToday() {
 }
 
 function filterLastSevenDays() {
-    const endDate =
-        getLatestAvailableDayDate() ||
-        new Date();
+    const endDate = new Date();
 
-    const startDate =
-        new Date(endDate);
+    endDate.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(endDate);
 
     startDate.setDate(
         startDate.getDate() - 6
