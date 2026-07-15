@@ -650,6 +650,8 @@ function renderConfig() {
     renderPanelSelection();
     renderFarmList();
     renderDayList();
+}
+
 
 /* ============================================================
    CABEÇALHO DO RELATÓRIO
@@ -1009,19 +1011,9 @@ function renderReport() {
 
         card.dataset.panel = panel.key;
 
-        const dailyPanelHasData =
-            panel.type !== "daily" ||
-            state.manualEntryEnabled ||
-            Boolean(
-                state.dailyDataReady?.[panel.key]
-            );
-
         if (
             panel.type === "daily" &&
-            (
-                visibleDayIndexes.length === 0 ||
-                !dailyPanelHasData
-            )
+            visibleDayIndexes.length === 0
         ) {
             card.innerHTML = `
                 <div class="rep-card-head">
