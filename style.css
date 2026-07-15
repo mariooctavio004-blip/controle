@@ -270,3 +270,88 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
     .rep-card, .rep-header, .rep-bottombar { break-inside: avoid; }
     @page { size: landscape; margin: 7mm; }
 }
+
+/* ============================================================
+   IMPORTAÇÃO LOCAL
+============================================================ */
+
+.local-import-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 18px 22px 0;
+    padding: 16px;
+    background: #edf3ff;
+    border: 1px solid #cbdafb;
+    border-radius: 14px;
+}
+
+.local-import-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.local-import-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 21px;
+}
+
+.local-import-info strong,
+.local-import-info small {
+    display: block;
+}
+
+.local-import-info strong {
+    color: #102a56;
+    font-size: 13px;
+}
+
+.local-import-info small {
+    margin-top: 4px;
+    color: #667085;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.local-import-button {
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.modal-separator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 22px 0;
+    color: #667085;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.modal-separator::before,
+.modal-separator::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: #dce3ec;
+}
+
+@media (max-width: 650px) {
+    .local-import-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .local-import-button {
+        width: 100%;
+    }
+}
