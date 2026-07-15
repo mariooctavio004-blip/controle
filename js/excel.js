@@ -76,40 +76,132 @@ function sheetToMatrix(sheet) {
 
 
 /* ============================================================
-   LEITURA DO WORKBOOK
+   IDENTIFICAÇÃO DA ABA PELO CONTEÚDO
+============================================================ */
+
+function detectSheetKeyByContent(json) {
+    if (!Array.isArray(json) || !json.length) {
+        return null;
+    }
+
+    const sample = json
+        .slice(0, 30)
+        .flat()
+        .map(normalizeName)
+        .filter(Boolean)
+        .join(" | ");
+
+    if (
+        sample.includes("DIF NASC") ||
+        sample.includes("NASC SISTEMA") ||
+        sample.includes("MORTES SISTEMA") ||
+        (
+            sample.includes("NASCIMENTO") &&
+            sample.includes("SISTEMA")
+        )
+    ) {
+        return "divergencias";
+    }
+
+    if (
+        sample.includes("MAPA MENSAL") ||
+        sample.includes("FECHAMENTO MENSAL") ||
+        sample.includes("SALDO FINAL")
+    ) {
+        return "mensal";
+    }
+
+    if (
+        sample.includes("ABASTECIMENTO") ||
+        sample.includes("COMBUSTIVEL") ||
+        sample.includes("LITROS")
+    ) {
+        return "abastecimento";
+    }
+
+    if (
+        sample.includes("DIARIO DE CAMPO") ||
+        sample.includes("MANEJO") ||
+        sample.includes("REBANHO")
+    ) {
+        return "diario";
+    }
+
+    if (
+        sample.includes("OPERACOES EM CAMPO") ||
+        sample.includes("OPERACAO EM CAMPO")
+    ) {
+        return "campo";
+    }
+
+    return null;
+}
+
+
+/* ============================================================
+   LEITURA DE TODAS AS ABAS
 ============================================================ */
 
 function processWorkbook(workbook, fallbackName = "") {
     if (
         !workbook ||
-        !Array.isArray(workbook.SheetNames)
+        !Array.isArray(workbook.SheetNames) ||
+        !workbook.SheetNames.length
     ) {
-        throw new Error("O arquivo informado não é uma planilha válida.");
+        throw new Error(
+            "O arquivo informado não possui abas válidas."
+        );
     }
 
     const recognized = [];
 
     workbook.SheetNames.forEach(sheetName => {
-        let key = classifySheetName(sheetName);
-
-        /*
-         * Quando existe somente uma aba com nome genérico,
-         * tenta identificar pelo nome do arquivo.
-         */
-        if (!key && workbook.SheetNames.length === 1) {
-            key = classifySheetName(fallbackName);
-        }
-
-        if (!key) return;
-
         const sheet = workbook.Sheets[sheetName];
+
+        if (!sheet) return;
+
         const matrix = sheetToMatrix(sheet);
 
         if (!matrix.length) return;
 
+        /*
+         * Primeiro tenta identificar pelo nome da aba.
+         */
+        let key = classifySheetName(sheetName);
+
+        /*
+         * Depois tenta identificar pelo conteúdo da aba.
+         * Isso permite ler duas ou mais abas dentro do mesmo arquivo,
+         * mesmo quando elas possuem nomes genéricos.
+         */
+        if (!key) {
+            key = detectSheetKeyByContent(matrix);
+        }
+
+        /*
+         * Se o arquivo tiver apenas uma aba, ainda tenta usar
+         * o nome do próprio arquivo.
+         */
+        if (
+            !key &&
+            workbook.SheetNames.length === 1
+        ) {
+            key = classifySheetName(fallbackName);
+        }
+
+        if (!key) {
+            console.warn(
+                `Aba não reconhecida: ${sheetName}`
+            );
+
+            return;
+        }
+
         importedData[key] = matrix;
 
-        recognized.push(key);
+        if (!recognized.includes(key)) {
+            recognized.push(key);
+        }
     });
 
     return recognized;
@@ -524,6 +616,90 @@ function parseDivergSheet(json) {
     return rows.length ? rows : null;
 }
 
+/* ============================================================
+   FILTRO APLICADO DURANTE A IMPORTAÇÃO
+============================================================ */
+
+function isImportDateFilterActive() {
+    return Boolean(
+        state?.filterStart ||
+        state?.filterEnd
+    );
+}
+
+function getFilteredImportedDays(days) {
+    if (!Array.isArray(days)) {
+        return [];
+    }
+
+    const normalizedDays = days.map(
+        normalizeImportedDay
+    );
+
+    /*
+     * Sem filtro ativo, importa todas as datas.
+     */
+    if (!isImportDateFilterActive()) {
+        return normalizedDays.filter(Boolean);
+    }
+
+    let startDate = isoToDate(
+        state.filterStart
+    );
+
+    let endDate = isoToDate(
+        state.filterEnd
+    );
+
+    if (endDate && !startDate) {
+        startDate = new Date(endDate);
+
+        startDate.setDate(
+            startDate.getDate() - 6
+        );
+    }
+
+    if (startDate && !endDate) {
+        endDate = new Date(startDate);
+
+        endDate.setDate(
+            endDate.getDate() + 6
+        );
+    }
+
+    if (
+        startDate &&
+        endDate &&
+        startDate > endDate
+    ) {
+        [startDate, endDate] = [
+            endDate,
+            startDate
+        ];
+    }
+
+    return normalizedDays.filter(dayLabel => {
+        const date = parseDayLabel(dayLabel);
+
+        if (!date) return false;
+
+        if (
+            startDate &&
+            date < startDate
+        ) {
+            return false;
+        }
+
+        if (
+            endDate &&
+            date > endDate
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+}
 
 /* ============================================================
    PRESERVAÇÃO DOS DADOS AO TROCAR O EIXO DE DATAS
@@ -773,18 +949,38 @@ function preencherSistema(options = {}) {
      * diária estiver sendo processada.
      */
     const canonical =
-        parsed.diario ||
-        parsed.campo ||
-        parsed.abastecimento;
+    parsed.diario ||
+    parsed.campo ||
+    parsed.abastecimento;
 
-    if (
-        canonical &&
-        Array.isArray(canonical.days) &&
-        canonical.days.length
+if (
+    canonical &&
+    Array.isArray(canonical.days) &&
+    canonical.days.length
+) {
+    const importedDays =
+        getFilteredImportedDays(
+            canonical.days
+        );
+
+    if (importedDays.length) {
+        remapDailyDataToDays(
+            importedDays
+        );
+    } else if (
+        isImportDateFilterActive()
     ) {
-        remapDailyDataToDays(canonical.days);
-    }
+        showInlineWarning(
+            "A planilha não possui dados dentro do período selecionado."
+        );
 
+        return {
+            found: [],
+            failed: [],
+            unmatched: []
+        };
+    }
+}
     ["campo", "abastecimento", "diario"]
         .forEach(key => {
             if (!importedData[key]) return;
