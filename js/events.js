@@ -808,85 +808,108 @@ async function generateCanvas() {
         );
     }
 
-    const periodDisplay =
-        getElement("periodDisplay");
+    const periodBox =
+        report.querySelector(".rep-period-box");
 
-    if (periodDisplay) {
-        periodDisplay.textContent =
-            state?.period || "";
+    const originalPeriodHTML =
+        periodBox?.innerHTML || "";
+
+    const originalStyle =
+        report.getAttribute("style");
+
+    /*
+     * Usa um texto único durante a captura. Isso evita que
+     * o html2canvas deixe o retângulo do período em branco.
+     */
+    if (periodBox) {
+        periodBox.textContent =
+            `PERÍODO: ${state?.period || ""}`;
     }
 
-    const periodBox =
-        report.querySelector(
-            ".rep-period-box"
+    /*
+     * Aumenta somente a largura usada na exportação.
+     * Assim os dois cards recebem espaço suficiente e a coluna
+     * PENDÊNCIAS não é cortada.
+     */
+    report.classList.add("export-capture");
+    report.style.width = "1800px";
+    report.style.maxWidth = "none";
+    report.style.overflow = "visible";
+
+    try {
+        if (document.fonts?.ready) {
+            await document.fonts.ready;
+        }
+
+        const images =
+            [...report.querySelectorAll("img")];
+
+        await Promise.all(
+            images.map(image => {
+                if (image.complete) {
+                    return Promise.resolve();
+                }
+
+                return new Promise(resolve => {
+                    image.addEventListener(
+                        "load",
+                        resolve,
+                        { once: true }
+                    );
+
+                    image.addEventListener(
+                        "error",
+                        resolve,
+                        { once: true }
+                    );
+                });
+            })
         );
 
-    if (periodBox) {
-        let label =
-            periodBox.querySelector(
-                ".rep-period-label"
+        await new Promise(resolve => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+
+        const captureWidth =
+            Math.ceil(report.scrollWidth);
+
+        const captureHeight =
+            Math.ceil(report.scrollHeight);
+
+        return await html2canvas(report, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            width: captureWidth,
+            height: captureHeight,
+            windowWidth: captureWidth,
+            windowHeight: captureHeight
+        });
+    } finally {
+        report.classList.remove(
+            "export-capture"
+        );
+
+        if (originalStyle === null) {
+            report.removeAttribute("style");
+        } else {
+            report.setAttribute(
+                "style",
+                originalStyle
             );
+        }
 
-        if (!label) {
-            label =
-                document.createElement("span");
-
-            label.className =
-                "rep-period-label";
-
-            label.textContent =
-                "📅 PERÍODO:";
-
-            periodBox.prepend(label);
+        if (periodBox) {
+            periodBox.innerHTML =
+                originalPeriodHTML;
         }
     }
-
-    if (document.fonts?.ready) {
-        await document.fonts.ready;
-    }
-
-    const images =
-        [...report.querySelectorAll("img")];
-
-    await Promise.all(
-        images.map(image => {
-            if (image.complete) {
-                return Promise.resolve();
-            }
-
-            return new Promise(resolve => {
-                image.addEventListener(
-                    "load",
-                    resolve,
-                    { once: true }
-                );
-
-                image.addEventListener(
-                    "error",
-                    resolve,
-                    { once: true }
-                );
-            });
-        })
-    );
-
-    await new Promise(resolve => {
-        requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-        });
-    });
-
-    return html2canvas(report, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: report.scrollWidth,
-        windowHeight: report.scrollHeight
-    });
 }
 
 function createExportFilename() {
