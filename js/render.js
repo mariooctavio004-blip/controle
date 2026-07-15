@@ -527,6 +527,12 @@ function removeDay(index) {
 }
 
 function renderDayList() {
+    state.days = Array.isArray(state.days)
+        ? state.days.filter(day =>
+            String(day ?? "").trim()
+        )
+        : [];
+
     const dayList =
         document.getElementById(
             "dayList"
@@ -645,9 +651,6 @@ function renderConfig() {
     renderFarmList();
     renderDayList();
 
-    if (typeof ensureManualEntryButton === "function") {
-        ensureManualEntryButton();
-    }
 }
 
 
