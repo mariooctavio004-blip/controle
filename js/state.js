@@ -168,7 +168,7 @@ function normalizeStatus(value) {
         return value;
     }
 
-    return "ok";
+    return "blank";
 }
 
 function mergeObject(defaultObject, savedObject) {
@@ -368,6 +368,26 @@ function ensureData() {
             };
         }
     });
+
+
+    if (
+        !state.dailyDataReady ||
+        typeof state.dailyDataReady !== "object"
+    ) {
+        state.dailyDataReady = {
+            campo: false,
+            abastecimento: false,
+            diario: false
+        };
+    }
+
+    ["campo", "abastecimento", "diario"].forEach(key => {
+        state.dailyDataReady[key] =
+            Boolean(state.dailyDataReady[key]);
+    });
+
+    state.manualEntryEnabled =
+        Boolean(state.manualEntryEnabled);
 
     /*
      * Painéis selecionados.
