@@ -29,6 +29,157 @@ const EXCEL_PANEL_LABELS = {
 };
 
 
+/* ============================================================
+   CACHE LOCAL DOS ARQUIVOS EXCEL
+   Guarda os bytes dos arquivos no IndexedDB. Assim, trocar o
+   filtro ou clicar em Atualizar não exige selecionar os arquivos
+   novamente. Os bytes não são enviados ao Supabase.
+============================================================ */
+
+const EXCEL_CACHE_DB_NAME = "controle-planilhas-cache";
+const EXCEL_CACHE_DB_VERSION = 1;
+const EXCEL_CACHE_STORE = "workbooks";
+
+let excelCacheDatabasePromise = null;
+let importedDataRefreshPromise = null;
+
+function openExcelCacheDatabase() {
+    if (excelCacheDatabasePromise) {
+        return excelCacheDatabasePromise;
+    }
+
+    excelCacheDatabasePromise = new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) {
+            reject(new Error("Este navegador não oferece IndexedDB."));
+            return;
+        }
+
+        const request = indexedDB.open(
+            EXCEL_CACHE_DB_NAME,
+            EXCEL_CACHE_DB_VERSION
+        );
+
+        request.onupgradeneeded = () => {
+            const database = request.result;
+
+            if (!database.objectStoreNames.contains(EXCEL_CACHE_STORE)) {
+                database.createObjectStore(EXCEL_CACHE_STORE, {
+                    keyPath: "cacheKey"
+                });
+            }
+        };
+
+        request.onsuccess = () => {
+            resolve(request.result);
+        };
+
+        request.onerror = () => {
+            reject(
+                request.error ||
+                new Error("Não foi possível abrir o cache das planilhas.")
+            );
+        };
+    });
+
+    return excelCacheDatabasePromise;
+}
+
+async function saveLocalWorkbookToCache({
+    cacheKey,
+    fileName,
+    buffer,
+    lastModified = 0
+}) {
+    const database = await openExcelCacheDatabase();
+
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction(
+            EXCEL_CACHE_STORE,
+            "readwrite"
+        );
+
+        transaction.objectStore(EXCEL_CACHE_STORE).put({
+            cacheKey,
+            fileName,
+            lastModified,
+            buffer,
+            savedAt: new Date().toISOString()
+        });
+
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(
+            transaction.error ||
+            new Error("Não foi possível guardar a planilha no navegador.")
+        );
+        transaction.onabort = transaction.onerror;
+    });
+}
+
+async function getLocalWorkbookFromCache(cacheKey) {
+    if (!cacheKey) return null;
+
+    const database = await openExcelCacheDatabase();
+
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction(
+            EXCEL_CACHE_STORE,
+            "readonly"
+        );
+
+        const request = transaction
+            .objectStore(EXCEL_CACHE_STORE)
+            .get(cacheKey);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(
+            request.error ||
+            new Error("Não foi possível ler a planilha guardada.")
+        );
+    });
+}
+
+async function deleteLocalWorkbookFromCache(cacheKey) {
+    if (!cacheKey) return false;
+
+    try {
+        const database = await openExcelCacheDatabase();
+
+        await new Promise((resolve, reject) => {
+            const transaction = database.transaction(
+                EXCEL_CACHE_STORE,
+                "readwrite"
+            );
+
+            transaction
+                .objectStore(EXCEL_CACHE_STORE)
+                .delete(cacheKey);
+
+            transaction.oncomplete = resolve;
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = transaction.onerror;
+        });
+
+        return true;
+    } catch (error) {
+        console.warn("Não foi possível excluir o cache da planilha:", error);
+        return false;
+    }
+}
+
+function createWorkbookCacheKey(file) {
+    const name = String(file?.name || "planilha.xlsx");
+    const size = Number(file?.size || 0);
+    const modified = Number(file?.lastModified || 0);
+
+    return [
+        "excel",
+        normalizeName(name) || "ARQUIVO",
+        size,
+        modified
+    ].join("-");
+}
+
+
 
 
 /* ============================================================
@@ -45,7 +196,7 @@ function ensureImportedFilesState() {
     return state.importedFiles;
 }
 
-function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = []) {
+function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = [], cacheInfo = {}) {
     const files = ensureImportedFilesState();
     const normalizedFileName = String(fileName || "Planilha sem nome").trim();
 
@@ -78,6 +229,14 @@ function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = []) {
         sheets: uniqueSheets,
         panels: uniquePanels,
         ignoredSheets: [...new Set(ignoredSheets || [])],
+        cacheKey:
+            cacheInfo.cacheKey ||
+            files[existingIndex]?.cacheKey ||
+            "",
+        fileSize:
+            Number(cacheInfo.fileSize || files[existingIndex]?.fileSize || 0),
+        lastModified:
+            Number(cacheInfo.lastModified || files[existingIndex]?.lastModified || 0),
         importedAt: new Date().toISOString(),
         lastSync: new Date().toLocaleTimeString("pt-BR", {
             hour: "2-digit",
@@ -164,7 +323,7 @@ function renderImportedWorkbookStatus() {
     list.innerHTML = localHTML + urlHTML;
 }
 
-function disconnectImportedLocalFile(fileId) {
+async function disconnectImportedLocalFile(fileId) {
     const files = ensureImportedFilesState();
     const index = files.findIndex(file => file?.id === fileId);
 
@@ -178,6 +337,8 @@ function disconnectImportedLocalFile(fileId) {
     if (!confirmed) return;
 
     files.splice(index, 1);
+
+    await deleteLocalWorkbookFromCache(file.cacheKey);
 
     if (typeof saveState === "function") {
         saveState();
@@ -203,7 +364,9 @@ function bindImportedWorkbookStatusEvents() {
 
         event.preventDefault();
         event.stopPropagation();
-        disconnectImportedLocalFile(button.dataset.localFileId);
+        void disconnectImportedLocalFile(
+            button.dataset.localFileId
+        );
     });
 }
 
@@ -1250,10 +1413,13 @@ function parseMonthlySheet(matrix) {
             matrix
         );
 
-    if (
-        periodLayout &&
-        periodLayout.monthFound
-    ) {
+    /*
+     * Se existe uma linha PERÍODO, a planilha é mensal por colunas.
+     * Nesse caso, a ausência do mês selecionado deve resultar em
+     * painel em branco — nunca cair no layout simples e usar outra
+     * coluna por engano.
+     */
+    if (periodLayout) {
         return periodLayout;
     }
 
@@ -1598,6 +1764,48 @@ function applyDivergSheet(parsed, unmatched) {
 
 
 /* ============================================================
+   LIMPEZA DOS PAINÉIS PARA O PERÍODO ATUAL
+============================================================ */
+
+function clearDailyPanelsForCurrentFilter(keys = [
+    "campo",
+    "abastecimento",
+    "diario"
+]) {
+    state.days = [];
+
+    keys.forEach(key => {
+        state.data[key] = {};
+
+        state.farms.forEach((farm, farmIndex) => {
+            state.data[key][farmIndex] = {};
+        });
+
+        if (!state.dailyDataReady || typeof state.dailyDataReady !== "object") {
+            state.dailyDataReady = {};
+        }
+
+        state.dailyDataReady[key] = true;
+    });
+
+    state.manualEntryEnabled = false;
+}
+
+function clearMonthlyPanelForCurrentFilter() {
+    const newMonthly = {};
+
+    state.farms.forEach((farm, farmIndex) => {
+        newMonthly[farmIndex] = "blank";
+    });
+
+    state.monthly = newMonthly;
+    state.monthLabel = formatMonthlyLabel(
+        getMonthlyReferenceDate()
+    );
+}
+
+
+/* ============================================================
    PREENCHIMENTO DO SISTEMA
 ============================================================ */
 
@@ -1674,6 +1882,10 @@ function preencherSistema(options = {}) {
 
     if (selectedDays.length) {
         remapDailyDataToDays(selectedDays);
+    } else if (noDatesInFilter) {
+        clearDailyPanelsForCurrentFilter(
+            dailyKeys.filter(hasImportedData)
+        );
     }
 
     dailyKeys.forEach(key => {
@@ -1702,6 +1914,7 @@ function preencherSistema(options = {}) {
         if (applyMonthlySheet(parsed.mensal, unmatched)) {
             found.push("mensal");
         } else {
+            clearMonthlyPanelForCurrentFilter();
             failed.push("mensal");
         }
     }
@@ -1724,7 +1937,10 @@ function preencherSistema(options = {}) {
         saveState();
     }
 
-    clearImportedData();
+    /*
+     * Não limpa importedData: as matrizes permanecem como fonte
+     * de verdade para reaplicar o filtro imediatamente.
+     */
 
     const result = {
         found,
@@ -1822,10 +2038,32 @@ async function importLocalExcelFiles(event) {
             if (result.recognized.length) {
                 recognizedSomething = true;
 
+                const cacheKey =
+                    createWorkbookCacheKey(file);
+
+                try {
+                    await saveLocalWorkbookToCache({
+                        cacheKey,
+                        fileName: file.name,
+                        buffer,
+                        lastModified: file.lastModified
+                    });
+                } catch (cacheError) {
+                    console.warn(
+                        `A planilha ${file.name} foi importada, mas não pôde ser guardada no cache:`,
+                        cacheError
+                    );
+                }
+
                 registerImportedLocalFile(
                     file.name,
                     result.recognizedSheets,
-                    result.ignored
+                    result.ignored,
+                    {
+                        cacheKey,
+                        fileSize: file.size,
+                        lastModified: file.lastModified
+                    }
                 );
             }
 
@@ -1880,6 +2118,187 @@ async function importLocalExcelFiles(event) {
     showInlineWarning(
         buildImportMessage(result, errors, ignoredSheets)
     );
+}
+
+
+/* ============================================================
+   REPROCESSAMENTO DOS ARQUIVOS LOCAIS
+============================================================ */
+
+async function loadImportedLocalFilesFromCache(options = {}) {
+    const {
+        clearBeforeLoad = true
+    } = options;
+
+    const files = getImportedLocalFiles();
+
+    if (clearBeforeLoad) {
+        clearImportedData();
+    }
+
+    const errors = [];
+    const loadedFiles = [];
+
+    for (const fileRecord of files) {
+        try {
+            const cached =
+                await getLocalWorkbookFromCache(
+                    fileRecord.cacheKey
+                );
+
+            if (!cached?.buffer) {
+                errors.push(
+                    `${fileRecord.fileName}: arquivo não está mais disponível neste navegador`
+                );
+                continue;
+            }
+
+            const workbook = XLSX.read(
+                cached.buffer,
+                {
+                    type: "array",
+                    cellDates: true
+                }
+            );
+
+            const result = processWorkbook(
+                workbook,
+                fileRecord.fileName
+            );
+
+            if (result.recognized.length) {
+                loadedFiles.push(fileRecord.fileName);
+            } else {
+                errors.push(
+                    `${fileRecord.fileName}: nenhuma aba reconhecida`
+                );
+            }
+        } catch (error) {
+            console.error(
+                `Erro ao recarregar ${fileRecord.fileName}:`,
+                error
+            );
+
+            errors.push(
+                `${fileRecord.fileName}: ${error?.message || "erro desconhecido"}`
+            );
+        }
+    }
+
+    return {
+        loadedFiles,
+        errors
+    };
+}
+
+async function refreshImportedLocalFiles(options = {}) {
+    const {
+        silent = false,
+        save = true
+    } = options;
+
+    if (importedDataRefreshPromise) {
+        return importedDataRefreshPromise;
+    }
+
+    importedDataRefreshPromise = (async () => {
+        const cacheResult =
+            await loadImportedLocalFilesFromCache({
+                clearBeforeLoad: true
+            });
+
+        if (!EXCEL_PANEL_KEYS.some(hasImportedData)) {
+            if (!silent) {
+                showInlineWarning(
+                    cacheResult.errors.length
+                        ? "Não foi possível recarregar os arquivos locais. " +
+                          cacheResult.errors.join(" | ")
+                        : "Nenhum arquivo local está disponível para atualização."
+                );
+            }
+
+            return {
+                found: [],
+                failed: [],
+                unmatched: [],
+                noDatesInFilter: false,
+                cacheErrors: cacheResult.errors
+            };
+        }
+
+        const result = preencherSistema({
+            silent: true
+        });
+
+        if (save && typeof saveState === "function") {
+            saveState();
+        }
+
+        renderImportedWorkbookStatus();
+
+        if (!silent) {
+            showInlineWarning(
+                buildImportMessage(
+                    result,
+                    cacheResult.errors
+                )
+            );
+        }
+
+        return {
+            ...result,
+            cacheErrors: cacheResult.errors
+        };
+    })();
+
+    try {
+        return await importedDataRefreshPromise;
+    } finally {
+        importedDataRefreshPromise = null;
+    }
+}
+
+/*
+ * Reaplica o filtro usando as matrizes já carregadas. Caso a página
+ * tenha sido recarregada e importedData esteja vazio, busca os bytes
+ * no IndexedDB e reconstrói as matrizes automaticamente.
+ */
+async function reapplyImportedDataForCurrentFilter(options = {}) {
+    const {
+        silent = true,
+        save = true
+    } = options;
+
+    if (EXCEL_PANEL_KEYS.some(hasImportedData)) {
+        const result = preencherSistema({
+            silent: true
+        });
+
+        if (save && typeof saveState === "function") {
+            saveState();
+        }
+
+        if (!silent) {
+            showInlineWarning(
+                buildImportMessage(result)
+            );
+        }
+
+        return result;
+    }
+
+    return refreshImportedLocalFiles({
+        silent,
+        save
+    });
+}
+
+/*
+ * Função pública usada pelo botão Atualizar. O events.js poderá
+ * chamar esta função junto da atualização das URLs.
+ */
+async function refreshAllImportedSources(options = {}) {
+    return refreshImportedLocalFiles(options);
 }
 
 
