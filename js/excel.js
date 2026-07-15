@@ -29,6 +29,133 @@ const EXCEL_PANEL_LABELS = {
 };
 
 
+
+
+/* ============================================================
+   REGISTRO DOS ARQUIVOS IMPORTADOS LOCALMENTE
+============================================================ */
+
+function ensureImportedFilesState() {
+    if (!state) return [];
+
+    if (!Array.isArray(state.importedFiles)) {
+        state.importedFiles = [];
+    }
+
+    return state.importedFiles;
+}
+
+function registerImportedLocalFile(fileName, panelKeys, ignoredSheets = []) {
+    const files = ensureImportedFilesState();
+    const normalizedFileName = String(fileName || "Planilha sem nome").trim();
+    const uniquePanels = [...new Set(panelKeys || [])]
+        .filter(key => EXCEL_PANEL_KEYS.includes(key));
+
+    const existingIndex = files.findIndex(item =>
+        normalizeName(item?.fileName) === normalizeName(normalizedFileName)
+    );
+
+    const record = {
+        id: existingIndex >= 0
+            ? files[existingIndex].id
+            : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        source: "local",
+        fileName: normalizedFileName,
+        panels: uniquePanels,
+        ignoredSheets: [...new Set(ignoredSheets || [])],
+        importedAt: new Date().toISOString(),
+        lastSync: new Date().toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit"
+        })
+    };
+
+    if (existingIndex >= 0) {
+        files[existingIndex] = record;
+    } else {
+        files.push(record);
+    }
+}
+
+function getImportedLocalFiles() {
+    return ensureImportedFilesState().filter(item =>
+        item && item.source === "local" && item.fileName
+    );
+}
+
+function renderImportedWorkbookStatus() {
+    if (!state) return;
+
+    const indicator = document.getElementById("connectionIndicator");
+    const list = document.getElementById("currentWorkbook");
+    if (!indicator || !list) return;
+
+    const localFiles = getImportedLocalFiles();
+    const urlConnections = EXCEL_PANEL_KEYS
+        .map(key => ({ key, ...(state.sharepoint?.[key] || {}) }))
+        .filter(item => item.url);
+
+    const totalSources = localFiles.length + urlConnections.length;
+
+    if (!totalSources) {
+        indicator.textContent = "Nenhuma planilha conectada";
+        list.textContent = "Selecione ou conecte uma planilha";
+        return;
+    }
+
+    indicator.textContent = `🟢 ${totalSources} planilha(s) disponível(is)`;
+
+    const localHTML = localFiles.map(file => {
+        const panelNames = (file.panels || [])
+            .map(key => EXCEL_PANEL_LABELS[key])
+            .filter(Boolean);
+
+        return `
+            <div class="connected-item connected-item-local">
+                <span>📄</span>
+                <div>
+                    <strong>${escapeHtml(file.fileName)}</strong>
+                    <small>${escapeHtml(panelNames.join(" • ") || "Nenhum painel reconhecido")}</small>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    const urlHTML = urlConnections.map(connection => `
+        <div class="connected-item connected-item-url">
+            <span>${connection.connected ? "🔗" : "⚠️"}</span>
+            <div>
+                <strong>${escapeHtml(EXCEL_PANEL_LABELS[connection.key])}</strong>
+                <small>${connection.connected
+                    ? `URL conectada${connection.lastSync ? ` • ${escapeHtml(connection.lastSync)}` : ""}`
+                    : "URL cadastrada, aguardando sincronização"}</small>
+            </div>
+        </div>
+    `).join("");
+
+    list.innerHTML = localHTML + urlHTML;
+}
+
+function installImportedWorkbookStatusIntegration() {
+    if (window.__importedWorkbookStatusInstalled) return;
+    window.__importedWorkbookStatusInstalled = true;
+
+    const originalRenderAttachStatus =
+        typeof window.renderAttachStatus === "function"
+            ? window.renderAttachStatus
+            : null;
+
+    if (originalRenderAttachStatus) {
+        window.renderAttachStatus = function(...args) {
+            originalRenderAttachStatus.apply(this, args);
+            renderImportedWorkbookStatus();
+        };
+    }
+
+    renderImportedWorkbookStatus();
+}
+
+
 /* ============================================================
    RECONHECIMENTO DAS ABAS
 ============================================================ */
@@ -1140,6 +1267,12 @@ async function importLocalExcelFiles(event) {
 
             if (result.recognized.length) {
                 recognizedSomething = true;
+
+                registerImportedLocalFile(
+                    file.name,
+                    result.recognized,
+                    result.ignored
+                );
             }
 
             ignoredSheets.push(
@@ -1184,6 +1317,12 @@ async function importLocalExcelFiles(event) {
         silent: true
     });
 
+    if (typeof saveState === "function") {
+        saveState();
+    }
+
+    renderImportedWorkbookStatus();
+
     showInlineWarning(
         buildImportMessage(result, errors, ignoredSheets)
     );
@@ -1205,7 +1344,7 @@ function bindExcelImportEvents() {
     input.addEventListener("change", importLocalExcelFiles);
 }
 
-document.addEventListener(
-    "DOMContentLoaded",
-    bindExcelImportEvents
-);
+document.addEventListener("DOMContentLoaded", () => {
+    bindExcelImportEvents();
+    installImportedWorkbookStatusIntegration();
+});
