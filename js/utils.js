@@ -44,3 +44,20 @@ function levenshtein(a, b){
     }
     return dp[m][n];
 }
+
+function matchFarmIndex(name){
+    const norm = normalizeName(name);
+    let idx = state.farms.findIndex(f => normalizeName(f) === norm);
+    if (idx !== -1) return idx;
+    idx = state.farms.findIndex(f => {
+        const fn = normalizeName(f);
+        return fn.includes(norm) || norm.includes(fn);
+    });
+    if (idx !== -1) return idx;
+    let best = -1, bestDist = Infinity;
+    state.farms.forEach((f, i) => {
+        const dist = levenshtein(normalizeName(f), norm);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    return (best !== -1 && bestDist <= 3) ? best : -1;
+}
