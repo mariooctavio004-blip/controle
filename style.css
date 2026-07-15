@@ -825,21 +825,61 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
     min-width: 112px !important;
 }
 
-/* Aumenta discretamente a leitura da imagem salva */
-#report.export-capture .rep-table {
-    font-size: 11px !important;
-}
+/* ============================================================
+   AUMENTO DE LEGIBILIDADE SOMENTE NA IMAGEM EXPORTADA
+============================================================ */
 
-#report.export-capture .rep-table th {
-    font-size: 10px !important;
-}
-
-#report.export-capture .rep-table td.farm-col {
-    font-size: 11px !important;
-}
-
+/* Títulos dos cards */
 #report.export-capture .rep-card-title-text,
 #report.export-capture .rep-card-head > span {
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+}
+
+#report.export-capture .rep-card-subtitle {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+}
+
+/* Cabeçalhos das tabelas: Fazenda, datas, Pendências, Status etc. */
+#report.export-capture .rep-table th {
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+/* Textos e números das células */
+#report.export-capture .rep-table td {
+    font-size: 13px !important;
+    font-weight: 750 !important;
+}
+
+/* Nomes das fazendas com destaque adicional */
+#report.export-capture .rep-table td.farm-col {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+}
+
+/* Números de pendências e totais */
+#report.export-capture .rep-total,
+#report.export-capture .total-pending-cell,
+#report.export-capture .pend-row td,
+#report.export-capture .diff-val,
+#report.export-capture .num-print-value {
+    font-size: 13px !important;
+    font-weight: 900 !important;
+}
+
+/* Números do painel de Divergências */
+#report.export-capture .rep-table-diverg td,
+#report.export-capture .rep-table-diverg .diff-val {
+    font-size: 12px !important;
+}
+
+/* Ícones levemente maiores somente na imagem */
+#report.export-capture .rep-icon {
+    width: 26px !important;
+    height: 26px !important;
     font-size: 12px !important;
 }
 
