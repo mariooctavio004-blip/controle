@@ -711,6 +711,243 @@ function bindWorkbookModalEvents() {
 
 
 /* ============================================================
+   ATUALIZAÇÃO DOS ARQUIVOS LOCAIS E FILTROS
+============================================================ */
+
+let filterReapplyTimer = null;
+let sourcesRefreshRunning = false;
+
+function scheduleImportedDataReapply(delay = 120) {
+    clearTimeout(filterReapplyTimer);
+
+    filterReapplyTimer = setTimeout(async () => {
+        if (
+            typeof reapplyImportedDataForCurrentFilter !==
+            "function"
+        ) {
+            return;
+        }
+
+        try {
+            await reapplyImportedDataForCurrentFilter({
+                silent: true,
+                save: true
+            });
+        } catch (error) {
+            console.error(
+                "Erro ao reaplicar os arquivos importados:",
+                error
+            );
+
+            showInlineWarning(
+                "Não foi possível reaplicar os arquivos importados para o período selecionado."
+            );
+        }
+    }, delay);
+}
+
+async function refreshConnectedData(button = null) {
+    if (sourcesRefreshRunning) return;
+
+    sourcesRefreshRunning = true;
+
+    const originalText =
+        button?.textContent || "";
+
+    if (button) {
+        button.disabled = true;
+        button.textContent =
+            "⏳ Atualizando...";
+    }
+
+    try {
+        /*
+         * Atualiza as URLs usando a função já existente no projeto.
+         * Os nomes são verificados para manter compatibilidade com
+         * diferentes versões do sharepoint.js.
+         */
+        const urlRefreshFunction =
+            typeof refreshAllWorkbooks === "function"
+                ? refreshAllWorkbooks
+                : typeof syncAllWorkbooks === "function"
+                    ? syncAllWorkbooks
+                    : typeof refreshSharePointData === "function"
+                        ? refreshSharePointData
+                        : typeof syncConnectedWorkbooks === "function"
+                            ? syncConnectedWorkbooks
+                            : null;
+
+        if (urlRefreshFunction) {
+            await urlRefreshFunction();
+        }
+
+        /*
+         * Recarrega também os arquivos importados do computador,
+         * usando o cache criado no excel.js.
+         */
+        if (
+            typeof refreshAllImportedSources ===
+            "function"
+        ) {
+            await refreshAllImportedSources({
+                silent: true,
+                save: true
+            });
+        } else if (
+            typeof reapplyImportedDataForCurrentFilter ===
+            "function"
+        ) {
+            await reapplyImportedDataForCurrentFilter({
+                silent: true,
+                save: true
+            });
+        }
+
+        if (
+            typeof renderAll === "function"
+        ) {
+            renderAll();
+        }
+
+        if (
+            typeof renderAttachStatus ===
+            "function"
+        ) {
+            renderAttachStatus();
+        }
+
+        showInlineWarning(
+            "Dados atualizados com as URLs e os arquivos importados."
+        );
+    } catch (error) {
+        console.error(
+            "Erro ao atualizar os dados conectados:",
+            error
+        );
+
+        showInlineWarning(
+            error?.message ||
+            "Não foi possível atualizar todos os dados."
+        );
+    } finally {
+        sourcesRefreshRunning = false;
+
+        if (button) {
+            button.disabled = false;
+            button.textContent =
+                originalText;
+        }
+    }
+}
+
+function isRefreshDataButton(element) {
+    if (!element) return false;
+
+    const knownIds = new Set([
+        "refreshBtn",
+        "refreshDataBtn",
+        "updateDataBtn",
+        "syncBtn",
+        "syncAllBtn",
+        "refreshWorkbooksBtn"
+    ]);
+
+    if (knownIds.has(element.id)) {
+        return true;
+    }
+
+    const text =
+        String(element.textContent || "")
+            .trim()
+            .toLocaleLowerCase("pt-BR");
+
+    return (
+        element.matches("button") &&
+        (
+            text === "atualizar" ||
+            text.includes("atualizar dados") ||
+            text.includes("atualizar planilhas") ||
+            text.includes("sincronizar")
+        )
+    );
+}
+
+function bindRefreshAndFilterIntegration() {
+    if (
+        document.body.dataset
+            .boundImportedRefresh === "true"
+    ) {
+        return;
+    }
+
+    document.body.dataset
+        .boundImportedRefresh = "true";
+
+    /*
+     * Integra o botão Atualizar existente sem depender de um ID
+     * específico. O listener não bloqueia o evento antigo.
+     */
+    document.addEventListener(
+        "click",
+        event => {
+            const button =
+                event.target.closest("button");
+
+            if (
+                button &&
+                isRefreshDataButton(button)
+            ) {
+                /*
+                 * Espera o manipulador antigo iniciar primeiro e depois
+                 * acrescenta a atualização dos arquivos locais.
+                 */
+                setTimeout(() => {
+                    refreshConnectedData(button);
+                }, 0);
+
+                return;
+            }
+
+            /*
+             * Hoje, Últimos 7 dias, Limpar filtro e outros botões da
+             * barra de período atualizam o state antes desta reaplicação.
+             */
+            if (
+                button &&
+                button.closest(".filter-bar")
+            ) {
+                scheduleImportedDataReapply(
+                    160
+                );
+            }
+        }
+    );
+
+    /*
+     * Alterações manuais nas datas.
+     */
+    [
+        "reportStartDate",
+        "reportEndDate"
+    ].forEach(id => {
+        const input =
+            document.getElementById(id);
+
+        if (!input) return;
+
+        input.addEventListener(
+            "change",
+            () => {
+                scheduleImportedDataReapply(
+                    120
+                );
+            }
+        );
+    });
+}
+
+
+/* ============================================================
    EXPORTAÇÃO E IMPRESSÃO
 ============================================================ */
 
@@ -1118,6 +1355,7 @@ function initializeEvents() {
     bindConfigPanelEvents();
     bindConfigMenuEvents();
     bindWorkbookModalEvents();
+    bindRefreshAndFilterIntegration();
     bindExportEvents();
     bindKeyboardEvents();
 }
