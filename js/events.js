@@ -166,49 +166,100 @@ function createUniqueDayLabel() {
     return `${baseLabel} ${number}`;
 }
 
-function normalizeControlText(value) {
-    return String(value || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim()
-        .toUpperCase();
+function getDayConfigCard() {
+    const dayList = document.getElementById("dayList");
+
+    return (
+        dayList?.closest(".config-card") ||
+        dayList?.parentElement ||
+        null
+    );
 }
 
-/*
- * Corrige definitivamente a área dos botões de dias.
- * Remove o botão vazio antigo e cria dois botões reais,
- * inteiros e clicáveis.
- */
-function ensureDayActionButtons() {
-    const addDayButton =
-        document.getElementById("addDayBtn");
+function createDayActionButtons() {
+    const dayList = document.getElementById("dayList");
+    const card = getDayConfigCard();
 
-    const manualButton =
-        document.getElementById(
-            "enableManualEntryBtn"
-        );
+    if (!dayList || !card) {
+        return {
+            addDayButton: null,
+            manualButton: null
+        };
+    }
 
     /*
-     * Os botões devem existir diretamente no HTML.
-     * O JavaScript não move, não recria e não envolve
-     * nenhum deles em outro elemento.
+     * Remove somente controles antigos da área de ações.
+     * Os chips dentro de #dayList nunca são removidos aqui.
      */
-    if (addDayButton) {
-        addDayButton.type = "button";
-        addDayButton.textContent =
-            "+ Adicionar dia";
-    }
+    card
+        .querySelectorAll(
+            "#addDayBtn, #enableManualEntryBtn, .day-actions"
+        )
+        .forEach(element => {
+            if (!element.closest("#dayList")) {
+                element.remove();
+            }
+        });
 
-    if (manualButton) {
-        manualButton.type = "button";
-        manualButton.classList.add(
-            "manual-entry-btn"
-        );
+    /*
+     * Remove o controle vazio que aparecia como quadrado branco.
+     */
+    [...card.children].forEach(element => {
+        if (
+            element === dayList ||
+            element.querySelector?.("#dayList")
+        ) {
+            return;
+        }
 
-        updateManualEntryButton(
-            manualButton
-        );
-    }
+        const text =
+            String(element.textContent || "").trim();
+
+        const isEmptyControl =
+            !text &&
+            (
+                element.matches("button") ||
+                element.matches("label") ||
+                element.matches(".add-chip")
+            );
+
+        if (isEmptyControl) {
+            element.remove();
+        }
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "day-actions";
+
+    const addDayButton =
+        document.createElement("button");
+
+    addDayButton.id = "addDayBtn";
+    addDayButton.type = "button";
+    addDayButton.className = "add-chip";
+    addDayButton.textContent = "+ Adicionar dia";
+
+    const manualButton =
+        document.createElement("button");
+
+    manualButton.id = "enableManualEntryBtn";
+    manualButton.type = "button";
+    manualButton.className =
+        "add-chip manual-entry-btn";
+
+    actions.append(
+        addDayButton,
+        manualButton
+    );
+
+    dayList.insertAdjacentElement(
+        "afterend",
+        actions
+    );
+
+    updateManualEntryButton(
+        manualButton
+    );
 
     return {
         addDayButton,
@@ -280,9 +331,7 @@ function addDay() {
 
 function bindFarmAndDayButtons() {
     const addFarmButton =
-        document.getElementById(
-            "addFarmBtn"
-        );
+        document.getElementById("addFarmBtn");
 
     if (
         addFarmButton &&
@@ -290,7 +339,6 @@ function bindFarmAndDayButtons() {
     ) {
         addFarmButton.type = "button";
         addFarmButton.dataset.boundAddFarm = "true";
-
         addFarmButton.addEventListener(
             "click",
             addFarm
@@ -300,28 +348,16 @@ function bindFarmAndDayButtons() {
     const {
         addDayButton,
         manualButton
-    } = ensureDayActionButtons();
+    } = createDayActionButtons();
 
-    if (
-        addDayButton &&
-        addDayButton.dataset.boundAddDay !== "true"
-    ) {
-        addDayButton.type = "button";
-        addDayButton.dataset.boundAddDay = "true";
-
+    if (addDayButton) {
         addDayButton.addEventListener(
             "click",
             addDay
         );
     }
 
-    if (
-        manualButton &&
-        manualButton.dataset.boundManualEntry !== "true"
-    ) {
-        manualButton.type = "button";
-        manualButton.dataset.boundManualEntry = "true";
-
+    if (manualButton) {
         manualButton.addEventListener(
             "click",
             toggleManualEntry
@@ -346,9 +382,7 @@ function updateManualEntryButton(
     if (!button) return;
 
     const enabled =
-        Boolean(
-            state?.manualEntryEnabled
-        );
+        Boolean(state?.manualEntryEnabled);
 
     button.classList.toggle(
         "is-active",
@@ -378,9 +412,7 @@ function toggleManualEntry() {
     }
 
     state.manualEntryEnabled =
-        !Boolean(
-            state.manualEntryEnabled
-        );
+        !Boolean(state.manualEntryEnabled);
 
     ensureData();
     renderAll();
@@ -395,11 +427,6 @@ function toggleManualEntry() {
     );
 }
 
-/*
- * Os eventos dos dois botões já são registrados por
- * bindFarmAndDayButtons(). Esta função permanece para
- * compatibilidade com initializeEvents().
- */
 function bindManualEntryEvents() {
     updateManualEntryButton();
 }
@@ -767,8 +794,7 @@ function restoreInputsAfterCapture() {
 }
 
 async function generateCanvas() {
-    const report =
-        getElement("report");
+    const report = getElement("report");
 
     if (!report) {
         throw new Error(
@@ -776,9 +802,7 @@ async function generateCanvas() {
         );
     }
 
-    if (
-        typeof html2canvas !== "function"
-    ) {
+    if (typeof html2canvas !== "function") {
         throw new Error(
             "A biblioteca html2canvas não foi carregada."
         );
@@ -805,9 +829,7 @@ async function generateCanvas() {
 
         if (!label) {
             label =
-                document.createElement(
-                    "span"
-                );
+                document.createElement("span");
 
             label.className =
                 "rep-period-label";
