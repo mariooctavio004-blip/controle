@@ -1180,3 +1180,43 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 #report.export-capture {
     padding-bottom: 24px !important;
 }
+
+/* ============================================================
+   EXPORTAÇÃO - CARDS DA MESMA ALTURA
+============================================================ */
+
+#report.export-capture .rep-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    align-items:stretch !important;
+    gap:14px !important;
+}
+
+#report.export-capture .rep-card{
+    display:flex !important;
+    flex-direction:column !important;
+    height:100% !important;
+}
+
+#report.export-capture .rep-table-wrapper{
+    flex:1 !important;
+    display:flex !important;
+}
+
+#report.export-capture .rep-table{
+    width:100% !important;
+    height:100% !important;
+    border-collapse:collapse !important;
+}
+
+#report.export-capture .rep-table tbody{
+    height:100% !important;
+}
+
+#report.export-capture .rep-table tfoot{
+    margin-top:auto !important;
+}
+
+#report.export-capture .rep-table tfoot tr{
+    height:48px !important;
+}
