@@ -814,27 +814,126 @@ async function generateCanvas() {
     const originalPeriodHTML =
         periodBox?.innerHTML || "";
 
-    const originalStyle =
+    const originalReportStyle =
         report.getAttribute("style");
 
     /*
-     * Usa um texto único durante a captura. Isso evita que
-     * o html2canvas deixe o retângulo do período em branco.
+     * Guarda todos os estilos inline alterados somente
+     * durante a captura para restaurá-los depois.
+     */
+    const changedElements = [];
+
+    function setCaptureStyles(
+        selector,
+        styles
+    ) {
+        report
+            .querySelectorAll(selector)
+            .forEach(element => {
+                changedElements.push({
+                    element,
+                    originalStyle:
+                        element.getAttribute("style")
+                });
+
+                Object.assign(
+                    element.style,
+                    styles
+                );
+            });
+    }
+
+    /*
+     * Usa um texto único durante a captura para evitar
+     * que o período fique em branco no html2canvas.
      */
     if (periodBox) {
         periodBox.textContent =
             `PERÍODO: ${state?.period || ""}`;
     }
 
-    /*
-     * Aumenta somente a largura usada na exportação.
-     * Assim os dois cards recebem espaço suficiente e a coluna
-     * PENDÊNCIAS não é cortada.
-     */
     report.classList.add("export-capture");
     report.style.width = "1800px";
     report.style.maxWidth = "none";
     report.style.overflow = "visible";
+
+    /*
+     * Aumento moderado SOMENTE na imagem exportada.
+     * Usamos estilos inline porque o html2canvas estava
+     * ignorando parte das regras de exportação do CSS.
+     */
+    setCaptureStyles(
+        ".rep-card-title-text",
+        {
+            fontSize: "16px",
+            fontWeight: "900",
+            lineHeight: "1.15"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-card-subtitle",
+        {
+            fontSize: "11px",
+            fontWeight: "800"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-card-icon",
+        {
+            fontSize: "18px"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-table th",
+        {
+            fontSize: "12px",
+            fontWeight: "900"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-table td",
+        {
+            fontSize: "13px",
+            fontWeight: "750"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-table td.farm-col",
+        {
+            fontSize: "14px",
+            fontWeight: "850"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-total, .total-pending-cell, .pend-row td",
+        {
+            fontSize: "14px",
+            fontWeight: "900"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-table-diverg td, .rep-table-diverg .diff-val, .num-print-value",
+        {
+            fontSize: "13px",
+            fontWeight: "900"
+        }
+    );
+
+    setCaptureStyles(
+        ".rep-icon",
+        {
+            width: "27px",
+            height: "27px",
+            fontSize: "13px"
+        }
+    );
 
     try {
         if (document.fonts?.ready) {
@@ -892,16 +991,36 @@ async function generateCanvas() {
             windowHeight: captureHeight
         });
     } finally {
+        /*
+         * Restaura todos os estilos para a tela normal
+         * permanecer exatamente como estava.
+         */
+        changedElements
+            .reverse()
+            .forEach(({
+                element,
+                originalStyle
+            }) => {
+                if (originalStyle === null) {
+                    element.removeAttribute("style");
+                } else {
+                    element.setAttribute(
+                        "style",
+                        originalStyle
+                    );
+                }
+            });
+
         report.classList.remove(
             "export-capture"
         );
 
-        if (originalStyle === null) {
+        if (originalReportStyle === null) {
             report.removeAttribute("style");
         } else {
             report.setAttribute(
                 "style",
-                originalStyle
+                originalReportStyle
             );
         }
 
