@@ -271,6 +271,7 @@ function normalizeLoadedState(savedState) {
 function ensureData() {
     if (!state) {
         state = cloneDefaultState();
+    ensureImportedWorkbookState();
     }
 
     if (!Array.isArray(state.farms)) {
@@ -456,6 +457,45 @@ function ensureData() {
 }
 
 
+
+/* ============================================================
+   CACHE DOS ARQUIVOS IMPORTADOS
+============================================================ */
+
+if (!state?.importedWorkbooks) {
+    defaultState.importedWorkbooks = {};
+}
+
+/*
+ * Guarda informações suficientes para reprocessar as planilhas
+ * quando o filtro mudar ou o botão Atualizar for acionado.
+ */
+function ensureImportedWorkbookState() {
+    if (!state.importedWorkbooks ||
+        typeof state.importedWorkbooks !== "object") {
+        state.importedWorkbooks = {};
+    }
+}
+
+function registerImportedWorkbookCache(key, metadata) {
+    ensureImportedWorkbookState();
+    state.importedWorkbooks[key] = {
+        ...(state.importedWorkbooks[key] || {}),
+        ...metadata,
+        updatedAt: new Date().toISOString()
+    };
+}
+
+function clearImportedWorkbookCache() {
+    state.importedWorkbooks = {};
+}
+
+window.registerImportedWorkbookCache =
+    registerImportedWorkbookCache;
+
+window.clearImportedWorkbookCache =
+    clearImportedWorkbookCache;
+
 /* ============================================================
    INDICADOR DE SALVAMENTO
 ============================================================ */
@@ -582,6 +622,7 @@ function applyReceivedState(
 
     state = normalized;
     ensureData();
+    ensureImportedWorkbookState();
 
     lastKnownJSON =
         JSON.stringify(state);
