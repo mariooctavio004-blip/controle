@@ -670,3 +670,26 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
         margin-right: 16px;
     }
 }
+
+/* ============================================================
+   BOTÕES DOS DIAS DO RELATÓRIO
+============================================================ */
+
+.day-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.manual-entry-btn {
+    color: #102a56;
+    background: #edf3ff;
+    border-color: #b9caec;
+}
+
+.manual-entry-btn:hover {
+    color: #ffffff;
+    background: #102a56;
+    border-color: #102a56;
+}
