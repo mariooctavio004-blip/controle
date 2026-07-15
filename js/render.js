@@ -651,6 +651,12 @@ function renderConfig() {
     renderFarmList();
     renderDayList();
 
+    if (typeof bindFarmAndDayButtons === "function") {
+        requestAnimationFrame(() => {
+            bindFarmAndDayButtons();
+        });
+    }
+
 }
 
 
