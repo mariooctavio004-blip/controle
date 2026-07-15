@@ -318,18 +318,56 @@ function updateReportDaysFromFilter(startDate, endDate) {
 
     if (!newDays.length) return;
 
-    if (typeof remapDailyDataToDays === "function") {
-        remapDailyDataToDays(newDays);
-    } else {
-        state.days = newDays;
-        ensureData();
-    }
+    const oldDays =
+        Array.isArray(state.days)
+            ? [...state.days]
+            : [];
+
+    const oldData =
+        state.data && typeof state.data === "object"
+            ? state.data
+            : {};
+
+    const remappedData = {};
+
+    PANEL_DEFS
+        .filter(panel => panel.type === "daily")
+        .forEach(panel => {
+            remappedData[panel.key] = {};
+
+            state.farms.forEach((farm, farmIndex) => {
+                remappedData[panel.key][farmIndex] = {};
+
+                newDays.forEach((dayLabel, newIndex) => {
+                    const oldIndex =
+                        oldDays.findIndex(oldDay =>
+                            String(oldDay).trim() === dayLabel
+                        );
+
+                    const oldStatus =
+                        oldIndex === -1
+                            ? undefined
+                            : oldData?.[panel.key]?.[farmIndex]?.[oldIndex];
+
+                    remappedData[panel.key][farmIndex][newIndex] =
+                        normalizeStatus(oldStatus);
+                });
+            });
+        });
+
+    state.days = newDays;
+    state.data = {
+        ...state.data,
+        ...remappedData
+    };
 
     /*
-     * O filtro apenas define os dias do relatório.
-     * Ele NÃO libera as tabelas para preenchimento.
+     * O filtro só define os dias. As tabelas permanecem
+     * ocultas até existir importação ou preenchimento manual.
      */
     state.manualEntryEnabled = false;
+
+    ensureData();
 }
 
 /* ============================================================
