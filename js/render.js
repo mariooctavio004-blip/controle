@@ -932,6 +932,35 @@ function bindReportEvents(grid) {
 }
 
 
+
+/* ============================================================
+   REAPLICAÇÃO AUTOMÁTICA DOS DADOS IMPORTADOS
+============================================================ */
+
+let renderRefreshTimer = null;
+
+function refreshReportFromImportedSources() {
+    clearTimeout(renderRefreshTimer);
+
+    renderRefreshTimer = setTimeout(async () => {
+        try {
+            if (typeof reapplyImportedDataForCurrentFilter === "function") {
+                await reapplyImportedDataForCurrentFilter({
+                    silent:true,
+                    save:false
+                });
+            }
+
+            renderReport();
+        } catch(error){
+            console.error(error);
+        }
+    },80);
+}
+
+window.refreshReportFromImportedSources =
+    refreshReportFromImportedSources;
+
 /* ============================================================
    RELATÓRIO
 ============================================================ */
@@ -989,6 +1018,10 @@ function renderReport() {
         );
 
         return;
+    }
+
+    if (typeof updateMonthlyPeriodFromFilter === "function") {
+        updateMonthlyPeriodFromFilter();
     }
 
     const visibleDayIndexes =
