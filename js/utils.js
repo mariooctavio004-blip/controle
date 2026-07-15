@@ -61,3 +61,7 @@ function matchFarmIndex(name){
     });
     return (best !== -1 && bestDist <= 3) ? best : -1;
 }
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
