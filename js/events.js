@@ -159,71 +159,81 @@ function createUniqueDayLabel() {
 }
 
 function bindFarmAndDayButtons() {
+    const addFarmButton =
+        document.getElementById("addFarmBtn");
+
     const addDayButton =
         document.getElementById("addDayBtn");
 
-    if (addDayButton) {
-        addDayButton.type = "button";
+    if (
+        addFarmButton &&
+        addFarmButton.dataset.boundAddFarm !== "true"
+    ) {
+        addFarmButton.dataset.boundAddFarm = "true";
+        addFarmButton.type = "button";
 
-        [...addDayButton.children].forEach(child => {
-            if (!String(child.textContent || "").trim()) {
-                child.remove();
+        addFarmButton.addEventListener("click", () => {
+            if (!Array.isArray(state.farms)) {
+                state.farms = [];
             }
+
+            state.farms.push(createUniqueFarmName());
+
+            ensureData();
+            renderAll();
+            saveState();
+
+            requestAnimationFrame(() => {
+                const inputs =
+                    document.querySelectorAll("#farmList input");
+
+                const lastInput =
+                    inputs[inputs.length - 1];
+
+                if (lastInput) {
+                    lastInput.focus();
+                    lastInput.select();
+                }
+            });
         });
     }
 
-    bindEvent("addFarmBtn", "click", () => {
-        if (!Array.isArray(state.farms)) {
-            state.farms = [];
-        }
+    if (
+        addDayButton &&
+        addDayButton.dataset.boundAddDay !== "true"
+    ) {
+        addDayButton.dataset.boundAddDay = "true";
+        addDayButton.type = "button";
 
-        state.farms.push(createUniqueFarmName());
+        addDayButton.addEventListener("click", () => {
+            if (!Array.isArray(state.days)) {
+                state.days = [];
+            }
 
-        ensureData();
-        renderAll();
-        saveState();
-
-        /*
-         * Move o foco para o último campo de fazenda.
-         */
-        requestAnimationFrame(() => {
-            const inputs = document.querySelectorAll(
-                "#farmList input"
+            state.days = state.days.filter(day =>
+                String(day ?? "").trim()
             );
 
-            const lastInput = inputs[inputs.length - 1];
+            state.days.push(createUniqueDayLabel());
 
-            if (lastInput) {
-                lastInput.focus();
-                lastInput.select();
-            }
+            ensureData();
+            renderAll();
+            saveState();
+
+            requestAnimationFrame(() => {
+                const inputs =
+                    document.querySelectorAll("#dayList input");
+
+                const lastInput =
+                    inputs[inputs.length - 1];
+
+                if (lastInput) {
+                    lastInput.focus();
+                    lastInput.select();
+                }
+            });
         });
-    });
-
-    bindEvent("addDayBtn", "click", () => {
-        if (!Array.isArray(state.days)) {
-            state.days = [];
-        }
-
-        state.days.push(createUniqueDayLabel());
-
-        ensureData();
-        renderAll();
-        saveState();
-
-        requestAnimationFrame(() => {
-            const inputs = document.querySelectorAll(
-                "#dayList input"
-            );
-
-            const lastInput = inputs[inputs.length - 1];
-
-            if (lastInput) {
-                lastInput.focus();
-                lastInput.select();
-            }
-        });
-    });
+    }
 }
 
 
@@ -232,33 +242,59 @@ function bindFarmAndDayButtons() {
    PREENCHIMENTO MANUAL DOS PAINÉIS DIÁRIOS
 ============================================================ */
 
+function removeEmptyDayControls() {
+    const dayList =
+        document.getElementById("dayList");
+
+    if (dayList) {
+        dayList
+            .querySelectorAll(".chip")
+            .forEach(chip => {
+                const input =
+                    chip.querySelector("input");
+
+                if (
+                    !input ||
+                    !String(input.value || "").trim()
+                ) {
+                    chip.remove();
+                }
+            });
+    }
+
+    const addDayButton =
+        document.getElementById("addDayBtn");
+
+    const container =
+        addDayButton?.parentElement;
+
+    if (!container) return;
+
+    [...container.children].forEach(element => {
+        if (
+            element === addDayButton ||
+            element.id === "enableManualEntryBtn" ||
+            element.id === "dayList"
+        ) {
+            return;
+        }
+
+        if (
+            element.matches("button") &&
+            !String(element.textContent || "").trim()
+        ) {
+            element.remove();
+        }
+    });
+}
+
 function ensureManualEntryButton() {
     const addDayButton =
         document.getElementById("addDayBtn");
 
     if (!addDayButton) return null;
 
-    /*
-     * Corrige estruturas antigas que deixaram um botão vazio
-     * ao lado de “Adicionar dia”.
-     */
-    const parent = addDayButton.parentElement;
-
-    if (parent) {
-        [...parent.children].forEach(element => {
-            const isAllowed =
-                element === addDayButton ||
-                element.id === "enableManualEntryBtn";
-
-            const isEmpty =
-                !String(element.textContent || "").trim() &&
-                !element.querySelector?.("input, img, svg");
-
-            if (!isAllowed && isEmpty) {
-                element.remove();
-            }
-        });
-    }
+    removeEmptyDayControls();
 
     let button =
         document.getElementById("enableManualEntryBtn");
@@ -313,7 +349,6 @@ function toggleManualEntry() {
         showInlineWarning(
             "Escolha Hoje, Últimos 7 dias ou informe um período antes de preencher manualmente."
         );
-
         return;
     }
 
@@ -323,8 +358,6 @@ function toggleManualEntry() {
     ensureData();
     renderAll();
     saveState();
-
-    updateManualEntryButton();
 
     showInlineWarning(
         state.manualEntryEnabled
