@@ -1066,29 +1066,33 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 }
 
 /* ============================================================
-   EXPORTAÇÃO — CORREÇÃO DO CORTE NOS CARDS INFERIORES
-   Aumenta somente a altura da segunda linha na imagem salva.
-   Não altera a tela normal do sistema.
+   EXPORTAÇÃO — CORREÇÃO DEFINITIVA DE CORTE E LEGIBILIDADE
+   Estas regras atuam somente na imagem salva.
 ============================================================ */
 
-#report.export-capture {
-    --altura-cards-diario-divergencias: 700px;
+/*
+ * Na exportação, os cards inferiores deixam de ter altura fixa.
+ * A grade mantém os dois cards da mesma linha com a mesma altura,
+ * mas permite que o conteúdo completo determine essa altura.
+ */
+#report.export-capture .rep-grid {
+    align-items: stretch !important;
 }
 
-/* Diário, Divergências e Mapa Mensal ficam com a mesma altura */
 #report.export-capture .rep-card[data-panel="diario"],
 #report.export-capture .rep-card[data-panel="divergencias"],
 #report.export-capture .rep-card-divergencias,
 #report.export-capture .rep-card:has(.rep-table-monthly) {
-    height: 700px !important;
-    min-height: 700px !important;
-    max-height: 700px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: stretch !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 
-/* A tabela usa todo o espaço interno, incluindo o rodapé */
+/* Área interna sem corte */
 #report.export-capture
 .rep-card[data-panel="diario"] .rep-table-wrapper,
 #report.export-capture
@@ -1098,11 +1102,12 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 #report.export-capture
 .rep-card:has(.rep-table-monthly) .rep-table-wrapper {
     flex: 1 1 auto !important;
-    min-height: 0 !important;
     height: auto !important;
-    overflow: hidden !important;
+    min-height: 0 !important;
+    overflow: visible !important;
 }
 
+/* Tabelas com altura natural */
 #report.export-capture
 .rep-card[data-panel="diario"] .rep-table,
 #report.export-capture
@@ -1111,42 +1116,35 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 .rep-card-divergencias .rep-table,
 #report.export-capture
 .rep-card:has(.rep-table-monthly) .rep-table {
-    width: 100% !important;
-    height: 100% !important;
-    table-layout: fixed !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
 }
 
-/* Reserva espaço suficiente para PENDÊNCIAS e TOTAL */
-#report.export-capture
-.rep-card[data-panel="diario"] .rep-table tfoot,
-#report.export-capture
-.rep-card[data-panel="divergencias"] .rep-table tfoot,
-#report.export-capture
-.rep-card-divergencias .rep-table tfoot,
-#report.export-capture
-.rep-card:has(.rep-table-monthly) .rep-table tfoot {
-    height: 46px !important;
-}
-
-#report.export-capture
-.rep-card[data-panel="diario"] .rep-table tfoot td,
-#report.export-capture
-.rep-card[data-panel="divergencias"] .rep-table tfoot td,
-#report.export-capture
-.rep-card-divergencias .rep-table tfoot td,
-#report.export-capture
-.rep-card:has(.rep-table-monthly) .rep-table tfoot td {
-    height: 46px !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
+/* Nenhuma linha ou rodapé pode ser escondido */
+#report.export-capture .rep-table tbody tr,
+#report.export-capture .rep-table tfoot,
+#report.export-capture .rep-table tfoot tr,
+#report.export-capture .rep-table tfoot td {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: visible !important;
-    text-overflow: clip !important;
 }
 
-/* Títulos dos painéis um pouco maiores */
+/* Espaço seguro para PENDÊNCIAS e TOTAL */
+#report.export-capture .rep-table tfoot td {
+    padding-top: 11px !important;
+    padding-bottom: 11px !important;
+    line-height: 1.2 !important;
+}
+
+/* Títulos dos quatro painéis */
 #report.export-capture .rep-card-title-text,
 #report.export-capture .rep-card-title-text span {
     font-size: 27px !important;
+    font-weight: 900 !important;
+    line-height: 1.12 !important;
 }
 
 #report.export-capture .rep-card-icon {
@@ -1154,10 +1152,31 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 }
 
 #report.export-capture .rep-card-subtitle {
-    font-size: 17px !important;
+    font-size: 18px !important;
+    font-weight: 850 !important;
 }
 
-/* Rodapé geral não encosta nos cards */
+/*
+ * Textos acima e abaixo das planilhas com o mesmo tamanho
+ * dos títulos dos painéis.
+ */
+#report.export-capture .rep-banner,
 #report.export-capture .rep-bottombar {
-    margin-top: 16px !important;
+    font-size: 27px !important;
+    font-weight: 900 !important;
+    line-height: 1.2 !important;
+}
+
+#report.export-capture .rep-banner {
+    padding: 15px 20px !important;
+}
+
+#report.export-capture .rep-bottombar {
+    margin-top: 18px !important;
+    padding: 17px 20px !important;
+}
+
+/* Evita qualquer corte na borda inferior do relatório */
+#report.export-capture {
+    padding-bottom: 24px !important;
 }
