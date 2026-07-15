@@ -475,44 +475,141 @@ function updateSaveStatus(message) {
 
 
 /* ============================================================
-   ADAPTADOR DE ARMAZENAMENTO
+   ARMAZENAMENTO LOCAL DE SEGURANÇA
 ============================================================ */
 
-async function storageGet() {
-    /*
-     * Usa o storage compartilhado quando ele estiver disponível.
-     */
-    if (
-        window.storage &&
-        typeof window.storage.get === "function"
-    ) {
-        const response =
-            await window.storage.get(STORAGE_KEY, true);
-
-        return response?.value || null;
-    }
-
-    /*
-     * Fallback para navegadores comuns e GitHub Pages.
-     */
-    return localStorage.getItem(STORAGE_KEY);
-}
-
-async function storageSet(value) {
-    if (
-        window.storage &&
-        typeof window.storage.set === "function"
-    ) {
-        await window.storage.set(
-            STORAGE_KEY,
-            value,
-            true
+function getLocalBackup() {
+    try {
+        return localStorage.getItem(STORAGE_KEY);
+    } catch (error) {
+        console.warn(
+            "Não foi possível ler o backup local:",
+            error
         );
 
-        return;
+        return null;
+    }
+}
+
+function setLocalBackup(value) {
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            value
+        );
+    } catch (error) {
+        console.warn(
+            "Não foi possível salvar o backup local:",
+            error
+        );
+    }
+}
+
+
+/* ============================================================
+   APLICAÇÃO DE ESTADO RECEBIDO
+============================================================ */
+
+let pendingRemoteState = null;
+let pendingRemoteTimer = null;
+let realtimeUnsubscribe = null;
+
+function applyReceivedState(
+    receivedState,
+    {
+        showMessage = false,
+        force = false
+    } = {}
+) {
+    if (
+        !receivedState ||
+        typeof receivedState !== "object" ||
+        Array.isArray(receivedState)
+    ) {
+        return false;
     }
 
-    localStorage.setItem(STORAGE_KEY, value);
+    if (!force && isTypingNow()) {
+        pendingRemoteState = receivedState;
+
+        clearTimeout(pendingRemoteTimer);
+
+        pendingRemoteTimer = setTimeout(() => {
+            if (!pendingRemoteState) return;
+
+            if (isTypingNow()) {
+                applyReceivedState(
+                    pendingRemoteState,
+                    {
+                        showMessage,
+                        force: false
+                    }
+                );
+
+                return;
+            }
+
+            const queuedState =
+                pendingRemoteState;
+
+            pendingRemoteState = null;
+
+            applyReceivedState(
+                queuedState,
+                {
+                    showMessage,
+                    force: true
+                }
+            );
+        }, 900);
+
+        return false;
+    }
+
+    const normalized =
+        normalizeLoadedState(
+            receivedState
+        );
+
+    const remoteJSON =
+        JSON.stringify(normalized);
+
+    if (
+        remoteJSON === lastKnownJSON
+    ) {
+        return false;
+    }
+
+    state = normalized;
+    ensureData();
+
+    lastKnownJSON =
+        JSON.stringify(state);
+
+    setLocalBackup(lastKnownJSON);
+
+    if (
+        typeof renderAll === "function"
+    ) {
+        renderAll();
+    }
+
+    if (
+        typeof renderAttachStatus === "function"
+    ) {
+        renderAttachStatus();
+    }
+
+    if (
+        showMessage &&
+        typeof showInlineWarning === "function"
+    ) {
+        showInlineWarning(
+            "Os dados foram atualizados por outra pessoa."
+        );
+    }
+
+    return true;
 }
 
 
@@ -521,40 +618,115 @@ async function storageSet(value) {
 ============================================================ */
 
 async function loadState() {
+    let localState = null;
+
     try {
-        const savedJSON = await storageGet();
+        const localJSON =
+            getLocalBackup();
 
-        if (savedJSON) {
-            const savedState = JSON.parse(savedJSON);
-
-            state = normalizeLoadedState(savedState);
-        } else {
-            state = cloneDefaultState();
+        if (localJSON) {
+            localState =
+                normalizeLoadedState(
+                    JSON.parse(localJSON)
+                );
         }
     } catch (error) {
-        console.error(
-            "Erro ao carregar o estado:",
+        console.warn(
+            "O backup local estava inválido:",
             error
         );
-
-        state = cloneDefaultState();
     }
+
+    state =
+        localState ||
+        cloneDefaultState();
 
     ensureData();
 
-    lastKnownJSON = JSON.stringify(state);
+    /*
+     * Primeiro renderiza o backup local para o sistema abrir
+     * rapidamente. Em seguida busca a versão compartilhada.
+     */
+    lastKnownJSON =
+        JSON.stringify(state);
 
-    if (typeof renderAll === "function") {
+    if (
+        typeof renderAll === "function"
+    ) {
         renderAll();
     }
 
-    startPolling();
+    try {
+        if (
+            typeof initializeSupabaseClient === "function"
+        ) {
+            initializeSupabaseClient();
+        }
 
-    /*
-     * A inicialização do SharePoint agora ocorre no app.js.
-     * Não iniciamos aqui para evitar dois timers e duas
-     * sincronizações simultâneas.
-     */
+        if (
+            typeof fetchSharedAppState === "function"
+        ) {
+            const remoteState =
+                await fetchSharedAppState();
+
+            const remoteHasContent =
+                remoteState &&
+                typeof remoteState === "object" &&
+                !Array.isArray(remoteState) &&
+                Object.keys(remoteState).length > 0;
+
+            if (remoteHasContent) {
+                applyReceivedState(
+                    remoteState,
+                    {
+                        force: true
+                    }
+                );
+            } else if (
+                localState &&
+                typeof saveSharedAppState === "function"
+            ) {
+                /*
+                 * Primeira migração: se o Supabase ainda estiver
+                 * vazio, envia a versão que já existia no navegador.
+                 */
+                await saveSharedAppState(
+                    state
+                );
+            }
+        }
+
+        if (
+            typeof subscribeToSharedAppState === "function"
+        ) {
+            realtimeUnsubscribe =
+                subscribeToSharedAppState(
+                    remoteState => {
+                        applyReceivedState(
+                            remoteState,
+                            {
+                                showMessage: true
+                            }
+                        );
+                    }
+                );
+        }
+    } catch (error) {
+        console.error(
+            "Não foi possível conectar ao Supabase:",
+            error
+        );
+
+        if (
+            typeof showInlineWarning === "function"
+        ) {
+            showInlineWarning(
+                "O sistema abriu com o backup local. A sincronização online será tentada novamente."
+            );
+        }
+    }
+
+    startPolling();
 
     return state;
 }
@@ -565,7 +737,9 @@ async function loadState() {
 ============================================================ */
 
 function saveState() {
-    updateSaveStatus("Salvando...");
+    updateSaveStatus(
+        "Salvando..."
+    );
 
     clearTimeout(saveTimer);
 
@@ -573,11 +747,22 @@ function saveState() {
         try {
             ensureData();
 
-            const json = JSON.stringify(state);
+            const json =
+                JSON.stringify(state);
 
-            await storageSet(json);
-
+            /*
+             * O backup local é atualizado antes da rede.
+             */
+            setLocalBackup(json);
             lastKnownJSON = json;
+
+            if (
+                typeof saveSharedAppState === "function"
+            ) {
+                await saveSharedAppState(
+                    state
+                );
+            }
 
             const now =
                 new Date().toLocaleTimeString(
@@ -589,34 +774,37 @@ function saveState() {
                 );
 
             updateSaveStatus(
-                `Salvo às ${now}`
+                `Salvo às ${now} — sincronizado`
             );
         } catch (error) {
             console.error(
-                "Erro ao salvar o estado:",
+                "Erro ao salvar o estado compartilhado:",
                 error
             );
 
-            updateSaveStatus("Erro ao salvar");
+            updateSaveStatus(
+                "Salvo localmente — sem sincronização"
+            );
 
             if (
                 typeof showInlineWarning === "function"
             ) {
                 showInlineWarning(
-                    "Não foi possível salvar as alterações."
+                    "As alterações foram salvas neste navegador, mas não foi possível sincronizar com os outros usuários."
                 );
             }
         }
-    }, 400);
+    }, 500);
 }
 
 
 /* ============================================================
-   SINCRONIZAÇÃO ENTRE ABAS E USUÁRIOS
+   SINCRONIZAÇÃO EM TEMPO REAL E POLLING DE SEGURANÇA
 ============================================================ */
 
 function isTypingNow() {
-    const element = document.activeElement;
+    const element =
+        document.activeElement;
 
     if (!element) return false;
 
@@ -634,62 +822,59 @@ function isTypingNow() {
 function startPolling() {
     clearInterval(pollTimer);
 
+    /*
+     * O Realtime normalmente atualiza imediatamente.
+     * Este polling de 20 segundos serve apenas como segurança
+     * caso o WebSocket seja interrompido.
+     */
     pollTimer = setInterval(async () => {
         if (isTypingNow()) return;
 
         try {
-            const remoteJSON = await storageGet();
-
             if (
-                !remoteJSON ||
-                remoteJSON === lastKnownJSON
+                typeof fetchSharedAppState !== "function"
             ) {
                 return;
             }
 
             const remoteState =
-                JSON.parse(remoteJSON);
+                await fetchSharedAppState();
 
-            state =
-                normalizeLoadedState(remoteState);
+            if (!remoteState) return;
 
-            ensureData();
-
-            lastKnownJSON =
-                JSON.stringify(state);
-
-            if (typeof renderAll === "function") {
-                renderAll();
-            }
-
-            if (
-                typeof renderAttachStatus === "function"
-            ) {
-                renderAttachStatus();
-            }
-
-            if (
-                typeof showInlineWarning === "function"
-            ) {
-                showInlineWarning(
-                    "Os dados foram atualizados por outra pessoa."
-                );
-            }
+            applyReceivedState(
+                remoteState,
+                {
+                    showMessage: false
+                }
+            );
         } catch (error) {
-            /*
-             * O polling continuará tentando no próximo ciclo.
-             */
             console.warn(
-                "Não foi possível verificar atualizações:",
+                "Não foi possível verificar atualizações no Supabase:",
                 error
             );
         }
-    }, 6000);
+    }, 20000);
 }
 
 function stopPolling() {
     clearInterval(pollTimer);
     pollTimer = null;
+
+    clearTimeout(
+        pendingRemoteTimer
+    );
+
+    pendingRemoteTimer = null;
+    pendingRemoteState = null;
+
+    if (
+        typeof realtimeUnsubscribe === "function"
+    ) {
+        realtimeUnsubscribe();
+    }
+
+    realtimeUnsubscribe = null;
 }
 
 
@@ -706,9 +891,16 @@ function resetState() {
 
     ensureData();
 
-    lastKnownJSON = JSON.stringify(state);
+    lastKnownJSON =
+        JSON.stringify(state);
 
-    if (typeof renderAll === "function") {
+    setLocalBackup(
+        lastKnownJSON
+    );
+
+    if (
+        typeof renderAll === "function"
+    ) {
         renderAll();
     }
 
@@ -720,3 +912,8 @@ function resetState() {
 
     saveState();
 }
+
+window.addEventListener(
+    "beforeunload",
+    stopPolling
+);
