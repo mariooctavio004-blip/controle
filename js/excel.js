@@ -350,36 +350,51 @@ function shouldIgnoreFarmRow(farm) {
    DATAS IMPORTADAS
 ============================================================ */
 
-function normalizeImportedDay(value) {
-    if (
-        value === undefined ||
-        value === null ||
-        String(value).trim() === ""
-    ) {
+function normalizeImportedDay(value){
+
+    if(value === undefined || value === null || value === ""){
         return "";
     }
 
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        const day = String(value.getDate()).padStart(2, "0");
-        const month = String(value.getMonth() + 1).padStart(2, "0");
+    // DATA DO EXCEL (Date)
+    if(value instanceof Date){
 
-        return `${day}/${month}`;
+        const dia = String(value.getDate()).padStart(2,"0");
+        const mes = String(value.getMonth()+1).padStart(2,"0");
+
+        return `${dia}/${mes}`;
+
     }
 
-    const text = String(value).trim();
+    // Número serial do Excel
+    if(typeof value === "number"){
 
-    const dateMatch = text.match(
-        /^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?$/
-    );
+        const d = XLSX.SSF.parse_date_code(value);
 
-    if (!dateMatch) return text;
+        if(d){
 
-    const day = String(dateMatch[1]).padStart(2, "0");
-    const month = String(dateMatch[2]).padStart(2, "0");
+            const dia = String(d.d).padStart(2,"0");
+            const mes = String(d.m).padStart(2,"0");
 
-    return `${day}/${month}`;
+            return `${dia}/${mes}`;
+
+        }
+
+    }
+
+    const texto = String(value).trim();
+
+    const m = texto.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+
+    if(m){
+
+        return `${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}`;
+
+    }
+
+    return texto;
+
 }
-
 function uniqueDays(days) {
     const result = [];
 
