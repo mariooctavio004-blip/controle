@@ -214,6 +214,127 @@ function bindFarmAndDayButtons() {
 }
 
 
+
+/* ============================================================
+   PREENCHIMENTO MANUAL DOS PAINÉIS DIÁRIOS
+============================================================ */
+
+function ensureManualEntryButton() {
+    const addDayButton =
+        document.getElementById("addDayBtn");
+
+    if (!addDayButton) return null;
+
+    let button =
+        document.getElementById("enableManualEntryBtn");
+
+    if (button) return button;
+
+    let actions =
+        addDayButton.closest(".day-actions");
+
+    if (!actions) {
+        actions = document.createElement("div");
+        actions.className = "day-actions";
+
+        addDayButton.parentNode.insertBefore(
+            actions,
+            addDayButton
+        );
+
+        actions.appendChild(addDayButton);
+    }
+
+    button = document.createElement("button");
+    button.id = "enableManualEntryBtn";
+    button.type = "button";
+    button.className =
+        "add-chip manual-entry-btn";
+    button.textContent =
+        "✏️ Preencher manualmente";
+
+    actions.appendChild(button);
+
+    return button;
+}
+
+function enableManualEntry() {
+    if (
+        !Array.isArray(state.days) ||
+        !state.days.length
+    ) {
+        showInlineWarning(
+            "Escolha Hoje, Últimos 7 dias ou informe um período antes de preencher manualmente."
+        );
+        return;
+    }
+
+    state.manualEntryEnabled = true;
+
+    if (
+        !state.dailyDataReady ||
+        typeof state.dailyDataReady !== "object"
+    ) {
+        state.dailyDataReady = {
+            campo: false,
+            abastecimento: false,
+            diario: false
+        };
+    }
+
+    ["campo", "abastecimento", "diario"].forEach(key => {
+        state.dailyDataReady[key] = true;
+
+        if (!state.data[key]) {
+            state.data[key] = {};
+        }
+
+        state.farms.forEach((farm, farmIndex) => {
+            if (!state.data[key][farmIndex]) {
+                state.data[key][farmIndex] = {};
+            }
+
+            state.days.forEach((day, dayIndex) => {
+                const current =
+                    state.data[key][farmIndex][dayIndex];
+
+                if (
+                    current !== "ok" &&
+                    current !== "no" &&
+                    current !== "blank"
+                ) {
+                    state.data[key][farmIndex][dayIndex] =
+                        "blank";
+                }
+            });
+        });
+    });
+
+    ensureData();
+    renderAll();
+    saveState();
+
+    showInlineWarning(
+        "Preenchimento manual ativado. Clique nos círculos para alterar o status."
+    );
+}
+
+function bindManualEntryEvents() {
+    const button = ensureManualEntryButton();
+
+    if (!button) return;
+
+    if (button.dataset.boundManualEntry === "true") {
+        return;
+    }
+
+    button.dataset.boundManualEntry = "true";
+    button.addEventListener(
+        "click",
+        enableManualEntry
+    );
+}
+
 /* ============================================================
    CONFIRMAÇÃO DE LIMPEZA
 ============================================================ */
@@ -835,6 +956,7 @@ function bindKeyboardEvents() {
 function initializeEvents() {
     bindConfigurationFields();
     bindFarmAndDayButtons();
+    bindManualEntryEvents();
     bindResetEvents();
     bindConfigPanelEvents();
     bindConfigMenuEvents();
