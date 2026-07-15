@@ -113,3 +113,14 @@ function normalizeStatus(v){
   if(v === 'ok' || v === 'no' || v === 'blank') return v;
   return 'ok';
 }
+
+function ensureData(){
+  PANEL_DEFS.filter(p=>p.type==='daily').forEach(p=>{
+    if(!state.data[p.key]) state.data[p.key] = {};
+    state.farms.forEach((f,fi)=>{
+      if(!state.data[p.key][fi]) state.data[p.key][fi] = {};
+      state.days.forEach((d,di)=>{
+        state.data[p.key][fi][di] = normalizeStatus(state.data[p.key][fi][di]);
+      });
+    });
+  });
