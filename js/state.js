@@ -1,164 +1,694 @@
 /* ============================================================
    STATE.JS
-   Estado padrão, estado atual, dados importados e funções que
-   garantem/normalizam a integridade do estado, além de
-   carregamento/salvamento (storage) e polling de atualizações.
+   Estado padrão, normalização dos dados, carregamento,
+   salvamento e sincronização entre usuários/abas.
+============================================================ */
+
+/* ============================================================
+   ESTADO PADRÃO
 ============================================================ */
 
 const defaultState = {
-  company: 'Nelore Cometa',
-  title: 'STATUS DE ENVIO DOS CONTROLES - FAZENDAS',
-  period: '01/07 A 04/07',
-  monthLabel: 'FECHAMENTO – JUNHO/2025',
-  banner: 'Contamos com todos para mantermos a disciplina e a qualidade das informações!',
-  farms: ['Furna Linda','Estância Cometa','Vale do Jaurú','Pantanal 1','Pantanal 2','São Lucas','Estância Maristela','Santa Rita','Liberdade','São Sebastião'],
-  days: ['01/07','02/07','03/07','04/07'],
-  selected: ['campo','abastecimento','diario','mensal'],
-  data: {},       // data[panelKey][farmIdx][dayIdx] = bool  (daily panels)
-  monthly: {},    // monthly[farmIdx] = bool
-  diverg: {},     // diverg[farmIdx] = { nd, ns, md, ms } numbers
-  sharepoint: {
+    company: "Nelore Cometa",
 
-  campo: {
-    name: "Operações em Campo",
-    url: "",
-    connected: false,
-    lastSync: ""
-  },
+    title: "STATUS DE ENVIO DOS CONTROLES - FAZENDAS",
 
-  abastecimento: {
-    name: "Abastecimento",
-    url: "",
-    connected: false,
-    lastSync: ""
-  },
+    period: "01/07 A 04/07",
 
-  diario: {
-    name: "Diário de Campo",
-    url: "",
-    connected: false,
-    lastSync: ""
-  },
+    monthLabel: "FECHAMENTO – JUNHO/2025",
 
-  mensal: {
-    name: "Mapa Mensal do Rebanho",
-    url: "",
-    connected: false,
-    lastSync: ""
-  },
+    banner:
+        "Contamos com todos para mantermos a disciplina e a qualidade das informações!",
 
-  divergencias: {
-    name: "Divergências entre Diário e Sistema",
-    url: "",
-    connected: false,
-    lastSync: ""
-  }
+    farms: [
+        "Furna Linda",
+        "Estância Cometa",
+        "Vale do Jaurú",
+        "Pantanal 1",
+        "Pantanal 2",
+        "São Lucas",
+        "Estância Maristela",
+        "Santa Rita",
+        "Liberdade",
+        "São Sebastião"
+    ],
 
-},
-  filterStart: '',     // data inicial (YYYY-MM-DD) do período mostrado nos painéis
-  filterEnd: ''         // data final (YYYY-MM-DD) do período mostrado nos painéis
+    days: [
+        "01/07",
+        "02/07",
+        "03/07",
+        "04/07"
+    ],
+
+    selected: [
+        "campo",
+        "abastecimento",
+        "diario",
+        "mensal"
+    ],
+
+    /*
+     * Painéis diários:
+     * data[painel][fazenda][dia] = "ok" | "no" | "blank"
+     */
+    data: {},
+
+    /*
+     * Painel mensal:
+     * monthly[fazenda] = "ok" | "no" | "blank"
+     */
+    monthly: {},
+
+    /*
+     * Divergências:
+     * diverg[fazenda] = { nd, ns, md, ms }
+     */
+    diverg: {},
+
+    /*
+     * Cada planilha possui uma URL e sincronização independente.
+     */
+    sharepoint: {
+        campo: {
+            name: "Operações em Campo",
+            url: "",
+            connected: false,
+            lastSync: "",
+            error: ""
+        },
+
+        abastecimento: {
+            name: "Abastecimento",
+            url: "",
+            connected: false,
+            lastSync: "",
+            error: ""
+        },
+
+        diario: {
+            name: "Diário de Campo",
+            url: "",
+            connected: false,
+            lastSync: "",
+            error: ""
+        },
+
+        mensal: {
+            name: "Mapa Mensal do Rebanho",
+            url: "",
+            connected: false,
+            lastSync: "",
+            error: ""
+        },
+
+        divergencias: {
+            name: "Divergências entre Diário e Sistema",
+            url: "",
+            connected: false,
+            lastSync: "",
+            error: ""
+        }
+    },
+
+    filterStart: "",
+
+    filterEnd: ""
 };
 
 let state = null;
 
-// =========================
-// IMPORTAÇÃO DE PLANILHAS
-// =========================
+
+/* ============================================================
+   DADOS TEMPORÁRIOS IMPORTADOS
+============================================================ */
 
 const importedData = {
     campo: null,
     abastecimento: null,
     diario: null,
+    mensal: null,
     divergencias: null
 };
 
-function normalizeStatus(v){
-  if(v === true) return 'ok';
-  if(v === false) return 'no';
-  if(v === 'ok' || v === 'no' || v === 'blank') return v;
-  return 'ok';
-}
 
-function ensureData(){
-  PANEL_DEFS.filter(p=>p.type==='daily').forEach(p=>{
-    if(!state.data[p.key]) state.data[p.key] = {};
-    state.farms.forEach((f,fi)=>{
-      if(!state.data[p.key][fi]) state.data[p.key][fi] = {};
-      state.days.forEach((d,di)=>{
-        state.data[p.key][fi][di] = normalizeStatus(state.data[p.key][fi][di]);
-      });
-    });
-  });
-  state.farms.forEach((f,fi)=>{
-    state.monthly[fi] = normalizeStatus(state.monthly[fi]);
-    if(!state.diverg[fi]) state.diverg[fi] = { nd:'', ns:'', md:'', ms:'' };
-  });
-  if(!Array.isArray(state.selected) || state.selected.length===0){
-    state.selected = ['campo','abastecimento','diario','mensal'];
-  }
-  state.selected = state.selected.slice(0,4);
-}
-
-// =========================
-// PERSISTÊNCIA (storage compartilhado) E SINCRONIZAÇÃO ENTRE ABAS/USUÁRIOS
-// =========================
+/* ============================================================
+   VARIÁVEIS DE CONTROLE
+============================================================ */
 
 let lastKnownJSON = null;
-
-async function loadState(){
-  try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    state = (res && res.value) ? JSON.parse(res.value) : JSON.parse(JSON.stringify(defaultState));
-  }catch(e){
-    state = JSON.parse(JSON.stringify(defaultState));
-  }
-  ensureData();
-  lastKnownJSON = JSON.stringify(state);
-  renderAll();
-  startPolling();
-  startSharepointAutoSync();
-  if(state.sharepointUrl) syncSharepointSheet(true); // sincroniza assim que a página abre
-}
-
 let saveTimer = null;
-function saveState(){
-  document.getElementById('saveStatus').textContent = 'Salvando...';
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(async ()=>{
-    try{
-      const json = JSON.stringify(state);
-      await window.storage.set(STORAGE_KEY, json, true);
-      lastKnownJSON = json;
-      const now = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-      document.getElementById('saveStatus').textContent = 'Salvo às ' + now + ' (compartilhado)';
-    }catch(e){
-      document.getElementById('saveStatus').textContent = 'Erro ao salvar';
-    }
-  }, 400);
-}
-
-function isTypingNow(){
-  const el = document.activeElement;
-  if(!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA';
-}
-
 let pollTimer = null;
-function startPolling(){
-  clearInterval(pollTimer);
-  pollTimer = setInterval(async ()=>{
-    if(isTypingNow()) return; // evita sobrescrever enquanto alguém digita
-    try{
-      const res = await window.storage.get(STORAGE_KEY, true);
-      const remoteJSON = (res && res.value) ? res.value : null;
-      if(remoteJSON && remoteJSON !== lastKnownJSON){
-        state = JSON.parse(remoteJSON);
-        ensureData();
-        lastKnownJSON = JSON.stringify(state);
+
+
+/* ============================================================
+   FUNÇÕES AUXILIARES DO ESTADO
+============================================================ */
+
+function cloneDefaultState() {
+    return JSON.parse(JSON.stringify(defaultState));
+}
+
+function normalizeStatus(value) {
+    if (value === true) return "ok";
+    if (value === false) return "no";
+
+    if (
+        value === "ok" ||
+        value === "no" ||
+        value === "blank"
+    ) {
+        return value;
+    }
+
+    return "ok";
+}
+
+function mergeObject(defaultObject, savedObject) {
+    if (
+        !savedObject ||
+        typeof savedObject !== "object" ||
+        Array.isArray(savedObject)
+    ) {
+        return JSON.parse(JSON.stringify(defaultObject));
+    }
+
+    const result = {
+        ...defaultObject,
+        ...savedObject
+    };
+
+    Object.keys(defaultObject).forEach(key => {
+        const defaultValue = defaultObject[key];
+        const savedValue = savedObject[key];
+
+        if (
+            defaultValue &&
+            typeof defaultValue === "object" &&
+            !Array.isArray(defaultValue)
+        ) {
+            result[key] = mergeObject(
+                defaultValue,
+                savedValue
+            );
+        }
+    });
+
+    return result;
+}
+
+function normalizeLoadedState(savedState) {
+    const normalized = mergeObject(
+        cloneDefaultState(),
+        savedState
+    );
+
+    normalized.farms = Array.isArray(normalized.farms)
+        ? normalized.farms
+        : cloneDefaultState().farms;
+
+    normalized.days = Array.isArray(normalized.days)
+        ? normalized.days
+        : cloneDefaultState().days;
+
+    normalized.selected = Array.isArray(normalized.selected)
+        ? normalized.selected
+        : cloneDefaultState().selected;
+
+    normalized.data =
+        normalized.data &&
+        typeof normalized.data === "object"
+            ? normalized.data
+            : {};
+
+    normalized.monthly =
+        normalized.monthly &&
+        typeof normalized.monthly === "object"
+            ? normalized.monthly
+            : {};
+
+    normalized.diverg =
+        normalized.diverg &&
+        typeof normalized.diverg === "object"
+            ? normalized.diverg
+            : {};
+
+    /*
+     * Migração do formato antigo, que possuía apenas
+     * state.sharepointUrl e state.lastSync.
+     */
+    if (
+        savedState?.sharepointUrl &&
+        !normalized.sharepoint.campo.url
+    ) {
+        normalized.sharepoint.campo.url =
+            savedState.sharepointUrl;
+
+        normalized.sharepoint.campo.connected = false;
+
+        normalized.sharepoint.campo.lastSync =
+            savedState.lastSync || "";
+    }
+
+    delete normalized.sharepointUrl;
+    delete normalized.lastSync;
+
+    return normalized;
+}
+
+
+/* ============================================================
+   GARANTIA DA ESTRUTURA DOS DADOS
+============================================================ */
+
+function ensureData() {
+    if (!state) {
+        state = cloneDefaultState();
+    }
+
+    if (!Array.isArray(state.farms)) {
+        state.farms = [];
+    }
+
+    if (!Array.isArray(state.days)) {
+        state.days = [];
+    }
+
+    if (!state.data || typeof state.data !== "object") {
+        state.data = {};
+    }
+
+    if (
+        !state.monthly ||
+        typeof state.monthly !== "object"
+    ) {
+        state.monthly = {};
+    }
+
+    if (
+        !state.diverg ||
+        typeof state.diverg !== "object"
+    ) {
+        state.diverg = {};
+    }
+
+    /*
+     * Painéis diários.
+     */
+    PANEL_DEFS
+        .filter(panel => panel.type === "daily")
+        .forEach(panel => {
+            if (!state.data[panel.key]) {
+                state.data[panel.key] = {};
+            }
+
+            state.farms.forEach((farm, farmIndex) => {
+                if (!state.data[panel.key][farmIndex]) {
+                    state.data[panel.key][farmIndex] = {};
+                }
+
+                state.days.forEach((day, dayIndex) => {
+                    const current =
+                        state.data[panel.key][farmIndex][dayIndex];
+
+                    state.data[panel.key][farmIndex][dayIndex] =
+                        normalizeStatus(current);
+                });
+            });
+        });
+
+    /*
+     * Mapa mensal e divergências.
+     */
+    state.farms.forEach((farm, farmIndex) => {
+        state.monthly[farmIndex] =
+            normalizeStatus(state.monthly[farmIndex]);
+
+        const currentDivergence =
+            state.diverg[farmIndex];
+
+        if (
+            !currentDivergence ||
+            typeof currentDivergence !== "object"
+        ) {
+            state.diverg[farmIndex] = {
+                nd: "",
+                ns: "",
+                md: "",
+                ms: ""
+            };
+        } else {
+            state.diverg[farmIndex] = {
+                nd:
+                    currentDivergence.nd === undefined
+                        ? ""
+                        : String(currentDivergence.nd),
+
+                ns:
+                    currentDivergence.ns === undefined
+                        ? ""
+                        : String(currentDivergence.ns),
+
+                md:
+                    currentDivergence.md === undefined
+                        ? ""
+                        : String(currentDivergence.md),
+
+                ms:
+                    currentDivergence.ms === undefined
+                        ? ""
+                        : String(currentDivergence.ms)
+            };
+        }
+    });
+
+    /*
+     * Painéis selecionados.
+     */
+    const validPanelKeys =
+        PANEL_DEFS.map(panel => panel.key);
+
+    if (
+        !Array.isArray(state.selected) ||
+        !state.selected.length
+    ) {
+        state.selected = [
+            "campo",
+            "abastecimento",
+            "diario",
+            "mensal"
+        ];
+    }
+
+    state.selected = state.selected
+        .filter(
+            (key, index, array) =>
+                validPanelKeys.includes(key) &&
+                array.indexOf(key) === index
+        )
+        .slice(0, 4);
+
+    /*
+     * Estrutura das planilhas online.
+     */
+    if (
+        !state.sharepoint ||
+        typeof state.sharepoint !== "object"
+    ) {
+        state.sharepoint =
+            cloneDefaultState().sharepoint;
+    }
+
+    Object.keys(defaultState.sharepoint).forEach(key => {
+        const defaultConnection =
+            defaultState.sharepoint[key];
+
+        const currentConnection =
+            state.sharepoint[key];
+
+        state.sharepoint[key] = {
+            ...defaultConnection,
+            ...(
+                currentConnection &&
+                typeof currentConnection === "object"
+                    ? currentConnection
+                    : {}
+            )
+        };
+    });
+
+    state.filterStart =
+        typeof state.filterStart === "string"
+            ? state.filterStart
+            : "";
+
+    state.filterEnd =
+        typeof state.filterEnd === "string"
+            ? state.filterEnd
+            : "";
+}
+
+
+/* ============================================================
+   INDICADOR DE SALVAMENTO
+============================================================ */
+
+function updateSaveStatus(message) {
+    const element =
+        document.getElementById("saveStatus");
+
+    /*
+     * O layout novo não possui obrigatoriamente esse elemento.
+     * Por isso, sua ausência não gera erro no console.
+     */
+    if (element) {
+        element.textContent = message;
+    }
+}
+
+
+/* ============================================================
+   ADAPTADOR DE ARMAZENAMENTO
+============================================================ */
+
+async function storageGet() {
+    /*
+     * Usa o storage compartilhado quando ele estiver disponível.
+     */
+    if (
+        window.storage &&
+        typeof window.storage.get === "function"
+    ) {
+        const response =
+            await window.storage.get(STORAGE_KEY, true);
+
+        return response?.value || null;
+    }
+
+    /*
+     * Fallback para navegadores comuns e GitHub Pages.
+     */
+    return localStorage.getItem(STORAGE_KEY);
+}
+
+async function storageSet(value) {
+    if (
+        window.storage &&
+        typeof window.storage.set === "function"
+    ) {
+        await window.storage.set(
+            STORAGE_KEY,
+            value,
+            true
+        );
+
+        return;
+    }
+
+    localStorage.setItem(STORAGE_KEY, value);
+}
+
+
+/* ============================================================
+   CARREGAMENTO
+============================================================ */
+
+async function loadState() {
+    try {
+        const savedJSON = await storageGet();
+
+        if (savedJSON) {
+            const savedState = JSON.parse(savedJSON);
+
+            state = normalizeLoadedState(savedState);
+        } else {
+            state = cloneDefaultState();
+        }
+    } catch (error) {
+        console.error(
+            "Erro ao carregar o estado:",
+            error
+        );
+
+        state = cloneDefaultState();
+    }
+
+    ensureData();
+
+    lastKnownJSON = JSON.stringify(state);
+
+    if (typeof renderAll === "function") {
         renderAll();
-        showInlineWarning('Os dados foram atualizados por outra pessoa agora mesmo.');
-      }
-    }catch(e){ /* silencioso: só tenta de novo no próximo ciclo */ }
-  }, 6000);
+    }
+
+    startPolling();
+
+    /*
+     * A inicialização do SharePoint agora ocorre no app.js.
+     * Não iniciamos aqui para evitar dois timers e duas
+     * sincronizações simultâneas.
+     */
+
+    return state;
+}
+
+
+/* ============================================================
+   SALVAMENTO
+============================================================ */
+
+function saveState() {
+    updateSaveStatus("Salvando...");
+
+    clearTimeout(saveTimer);
+
+    saveTimer = setTimeout(async () => {
+        try {
+            ensureData();
+
+            const json = JSON.stringify(state);
+
+            await storageSet(json);
+
+            lastKnownJSON = json;
+
+            const now =
+                new Date().toLocaleTimeString(
+                    "pt-BR",
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    }
+                );
+
+            updateSaveStatus(
+                `Salvo às ${now}`
+            );
+        } catch (error) {
+            console.error(
+                "Erro ao salvar o estado:",
+                error
+            );
+
+            updateSaveStatus("Erro ao salvar");
+
+            if (
+                typeof showInlineWarning === "function"
+            ) {
+                showInlineWarning(
+                    "Não foi possível salvar as alterações."
+                );
+            }
+        }
+    }, 400);
+}
+
+
+/* ============================================================
+   SINCRONIZAÇÃO ENTRE ABAS E USUÁRIOS
+============================================================ */
+
+function isTypingNow() {
+    const element = document.activeElement;
+
+    if (!element) return false;
+
+    const tagName =
+        element.tagName?.toUpperCase();
+
+    return (
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT" ||
+        element.isContentEditable
+    );
+}
+
+function startPolling() {
+    clearInterval(pollTimer);
+
+    pollTimer = setInterval(async () => {
+        if (isTypingNow()) return;
+
+        try {
+            const remoteJSON = await storageGet();
+
+            if (
+                !remoteJSON ||
+                remoteJSON === lastKnownJSON
+            ) {
+                return;
+            }
+
+            const remoteState =
+                JSON.parse(remoteJSON);
+
+            state =
+                normalizeLoadedState(remoteState);
+
+            ensureData();
+
+            lastKnownJSON =
+                JSON.stringify(state);
+
+            if (typeof renderAll === "function") {
+                renderAll();
+            }
+
+            if (
+                typeof renderAttachStatus === "function"
+            ) {
+                renderAttachStatus();
+            }
+
+            if (
+                typeof showInlineWarning === "function"
+            ) {
+                showInlineWarning(
+                    "Os dados foram atualizados por outra pessoa."
+                );
+            }
+        } catch (error) {
+            /*
+             * O polling continuará tentando no próximo ciclo.
+             */
+            console.warn(
+                "Não foi possível verificar atualizações:",
+                error
+            );
+        }
+    }, 6000);
+}
+
+function stopPolling() {
+    clearInterval(pollTimer);
+    pollTimer = null;
+}
+
+
+/* ============================================================
+   RESET DO ESTADO
+============================================================ */
+
+function resetState() {
+    state = cloneDefaultState();
+
+    Object.keys(importedData).forEach(key => {
+        importedData[key] = null;
+    });
+
+    ensureData();
+
+    lastKnownJSON = JSON.stringify(state);
+
+    if (typeof renderAll === "function") {
+        renderAll();
+    }
+
+    if (
+        typeof renderAttachStatus === "function"
+    ) {
+        renderAttachStatus();
+    }
+
+    saveState();
 }
