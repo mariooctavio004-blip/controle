@@ -180,86 +180,35 @@ function normalizeControlText(value) {
  * inteiros e clicáveis.
  */
 function ensureDayActionButtons() {
-    const dayList =
-        document.getElementById("dayList");
-
-    if (!dayList) {
-        return {
-            addDayButton: null,
-            manualButton: null
-        };
-    }
-
-    const card =
-        dayList.closest(".config-card") ||
-        dayList.parentElement;
-
-    if (!card) {
-        return {
-            addDayButton: null,
-            manualButton: null
-        };
-    }
-
-    let actions =
-        card.querySelector(".day-actions");
-
-    if (!actions) {
-        actions = document.createElement("div");
-        actions.className = "day-actions";
-
-        dayList.insertAdjacentElement(
-            "afterend",
-            actions
-        );
-    }
-
-    let addDayButton =
+    const addDayButton =
         document.getElementById("addDayBtn");
 
-    if (!addDayButton) {
-        addDayButton =
-            document.createElement("button");
-
-        addDayButton.id = "addDayBtn";
-        addDayButton.type = "button";
-        addDayButton.className = "add-chip";
-        addDayButton.textContent =
-            "+ Adicionar dia";
-    }
-
-    let manualButton =
+    const manualButton =
         document.getElementById(
             "enableManualEntryBtn"
         );
 
-    if (!manualButton) {
-        manualButton =
-            document.createElement("button");
-
-        manualButton.id =
-            "enableManualEntryBtn";
-
-        manualButton.type = "button";
-        manualButton.className =
-            "add-chip manual-entry-btn";
-    }
-
     /*
-     * Move os botões reais para a área correta.
-     * Não apaga nem recria os botões em cada renderização.
+     * Os botões devem existir diretamente no HTML.
+     * O JavaScript não move, não recria e não envolve
+     * nenhum deles em outro elemento.
      */
-    if (addDayButton.parentElement !== actions) {
-        actions.appendChild(addDayButton);
+    if (addDayButton) {
+        addDayButton.type = "button";
+        addDayButton.textContent =
+            "+ Adicionar dia";
     }
 
-    if (manualButton.parentElement !== actions) {
-        actions.appendChild(manualButton);
-    }
+    if (manualButton) {
+        manualButton.type = "button";
+        manualButton.classList.add(
+            "manual-entry-btn"
+        );
 
-    updateManualEntryButton(
-        manualButton
-    );
+        updateManualEntryButton(
+            manualButton
+        );
+    }
 
     return {
         addDayButton,
