@@ -866,3 +866,76 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 #report.export-capture .rep-table-diverg .diff-val {
     font-weight: 900 !important;
 }
+
+/* ============================================================
+   MELHORIA DE LEGIBILIDADE DAS TABELAS
+============================================================ */
+
+/* Todas as tabelas */
+.rep-table{
+    font-size:15px;
+}
+
+.rep-table th{
+    font-size:13px;
+    font-weight:700;
+}
+
+.rep-table td{
+    font-size:15px;
+    font-weight:600;
+}
+
+/* Altura das linhas */
+.rep-table tbody tr{
+    height:46px;
+}
+
+/* Cabeçalhos */
+.rep-card-head{
+    min-height:46px;
+    font-size:18px;
+    font-weight:700;
+}
+
+/* Ícones */
+.rep-icon{
+    transform:scale(1.12);
+}
+
+/* ============================================================
+   MAPA MENSAL
+============================================================ */
+
+.rep-card:has(.rep-table-monthly){
+    display:flex;
+    flex-direction:column;
+}
+
+.rep-table-monthly{
+    width:100%;
+    height:100%;
+    table-layout:fixed;
+}
+
+.rep-table-monthly tbody tr{
+    height:46px;
+}
+
+.rep-table-monthly th:first-child{
+    width:160px;
+}
+
+.rep-table-monthly th:last-child{
+    width:auto;
+}
+
+.rep-table-monthly td{
+    font-size:15px;
+    font-weight:600;
+}
+
+/* Faz o card ocupar exatamente a mesma altura dos demais */
+.rep-card:has(.rep-table-monthly){
+    min-height:100%;
+}
