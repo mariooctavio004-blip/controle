@@ -45,11 +45,25 @@ function ensureImportedFilesState() {
     return state.importedFiles;
 }
 
-function registerImportedLocalFile(fileName, panelKeys, ignoredSheets = []) {
+function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = []) {
     const files = ensureImportedFilesState();
     const normalizedFileName = String(fileName || "Planilha sem nome").trim();
-    const uniquePanels = [...new Set(panelKeys || [])]
-        .filter(key => EXCEL_PANEL_KEYS.includes(key));
+
+    const normalizedSheets = (Array.isArray(sheets) ? sheets : [])
+        .map(item => ({
+            name: String(item?.name || item?.sheetName || "").trim(),
+            key: item?.key || null
+        }))
+        .filter(item => item.name && EXCEL_PANEL_KEYS.includes(item.key));
+
+    const uniqueSheets = normalizedSheets.filter((item, index, array) =>
+        array.findIndex(other =>
+            normalizeName(other.name) === normalizeName(item.name) &&
+            other.key === item.key
+        ) === index
+    );
+
+    const uniquePanels = [...new Set(uniqueSheets.map(item => item.key))];
 
     const existingIndex = files.findIndex(item =>
         normalizeName(item?.fileName) === normalizeName(normalizedFileName)
@@ -61,6 +75,7 @@ function registerImportedLocalFile(fileName, panelKeys, ignoredSheets = []) {
             : `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         source: "local",
         fileName: normalizedFileName,
+        sheets: uniqueSheets,
         panels: uniquePanels,
         ignoredSheets: [...new Set(ignoredSheets || [])],
         importedAt: new Date().toISOString(),
@@ -106,17 +121,30 @@ function renderImportedWorkbookStatus() {
     indicator.textContent = `🟢 ${totalSources} planilha(s) disponível(is)`;
 
     const localHTML = localFiles.map(file => {
-        const panelNames = (file.panels || [])
-            .map(key => EXCEL_PANEL_LABELS[key])
-            .filter(Boolean);
+        const exactSheetNames = Array.isArray(file.sheets) && file.sheets.length
+            ? file.sheets.map(sheet => sheet.name).filter(Boolean)
+            : (file.panels || [])
+                .map(key => EXCEL_PANEL_LABELS[key])
+                .filter(Boolean);
 
         return `
             <div class="connected-item connected-item-local">
                 <span>📄</span>
-                <div>
+
+                <div class="connected-item-content">
                     <strong>${escapeHtml(file.fileName)}</strong>
-                    <small>${escapeHtml(panelNames.join(" • ") || "Nenhum painel reconhecido")}</small>
+                    <small>Abas: ${escapeHtml(exactSheetNames.join(" • ") || "Nenhuma aba reconhecida")}</small>
                 </div>
+
+                <button
+                    type="button"
+                    class="disconnect-local-workbook"
+                    data-local-file-id="${escapeHtml(file.id)}"
+                    title="Desvincular ${escapeHtml(file.fileName)}"
+                    aria-label="Desvincular ${escapeHtml(file.fileName)}"
+                >
+                    Desvincular
+                </button>
             </div>
         `;
     }).join("");
@@ -136,6 +164,49 @@ function renderImportedWorkbookStatus() {
     list.innerHTML = localHTML + urlHTML;
 }
 
+function disconnectImportedLocalFile(fileId) {
+    const files = ensureImportedFilesState();
+    const index = files.findIndex(file => file?.id === fileId);
+
+    if (index === -1) return;
+
+    const file = files[index];
+    const confirmed = window.confirm(
+        `Deseja desvincular a planilha ${file.fileName}? Os dados já importados permanecerão no relatório.`
+    );
+
+    if (!confirmed) return;
+
+    files.splice(index, 1);
+
+    if (typeof saveState === "function") {
+        saveState();
+    }
+
+    renderImportedWorkbookStatus();
+
+    if (typeof showInlineWarning === "function") {
+        showInlineWarning(`Planilha ${file.fileName} desvinculada. Os dados importados foram mantidos.`);
+    }
+}
+
+function bindImportedWorkbookStatusEvents() {
+    const list = document.getElementById("currentWorkbook");
+
+    if (!list || list.dataset.localDisconnectBound === "true") return;
+
+    list.dataset.localDisconnectBound = "true";
+
+    list.addEventListener("click", event => {
+        const button = event.target.closest(".disconnect-local-workbook");
+        if (!button) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        disconnectImportedLocalFile(button.dataset.localFileId);
+    });
+}
+
 function installImportedWorkbookStatusIntegration() {
     if (window.__importedWorkbookStatusInstalled) return;
     window.__importedWorkbookStatusInstalled = true;
@@ -153,6 +224,7 @@ function installImportedWorkbookStatusIntegration() {
     }
 
     renderImportedWorkbookStatus();
+    bindImportedWorkbookStatusEvents();
 }
 
 
@@ -365,10 +437,25 @@ function processWorkbook(workbook, fallbackName = "") {
     }
 
     const recognized = [];
+    const recognizedSheets = [];
     const ignored = [];
+    const hidden = [];
     const fallbackKey = classifySheetName(fallbackName);
+    const sheetMetadata = workbook.Workbook?.Sheets || [];
 
-    workbook.SheetNames.forEach(sheetName => {
+    workbook.SheetNames.forEach((sheetName, sheetIndex) => {
+        const metadata = sheetMetadata[sheetIndex];
+
+        /*
+         * SheetJS usa Hidden = 0 para visível, 1 para oculta e 2 para
+         * muito oculta. Abas ocultas nunca são importadas.
+         */
+        if (Number(metadata?.Hidden || 0) !== 0) {
+            hidden.push(sheetName);
+            console.info(`Aba oculta ignorada: ${sheetName}`);
+            return;
+        }
+
         const sheet = workbook.Sheets[sheetName];
 
         if (!sheet) {
@@ -389,10 +476,6 @@ function processWorkbook(workbook, fallbackName = "") {
             key = detectSheetKeyByContent(matrix);
         }
 
-        /*
-         * Último recurso: usa o tipo indicado pelo nome do arquivo.
-         * Isso também permite um arquivo do mesmo controle com duas abas.
-         */
         if (!key && fallbackKey) {
             key = fallbackKey;
         }
@@ -409,6 +492,11 @@ function processWorkbook(workbook, fallbackName = "") {
             recognized.push(key);
         }
 
+        recognizedSheets.push({
+            name: sheetName,
+            key
+        });
+
         console.info(
             `Aba reconhecida: ${sheetName} → ${EXCEL_PANEL_LABELS[key]}`
         );
@@ -416,7 +504,9 @@ function processWorkbook(workbook, fallbackName = "") {
 
     return {
         recognized,
-        ignored
+        recognizedSheets,
+        ignored,
+        hidden
     };
 }
 
@@ -1270,7 +1360,7 @@ async function importLocalExcelFiles(event) {
 
                 registerImportedLocalFile(
                     file.name,
-                    result.recognized,
+                    result.recognizedSheets,
                     result.ignored
                 );
             }
