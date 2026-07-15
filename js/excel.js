@@ -1089,6 +1089,16 @@ function applyDailySheet(key, parsed, selectedDays, unmatched) {
         });
     });
 
+    if (
+        !state.dailyDataReady ||
+        typeof state.dailyDataReady !== "object"
+    ) {
+        state.dailyDataReady = {};
+    }
+
+    state.dailyDataReady[key] = true;
+    state.manualEntryEnabled = false;
+
     return true;
 }
 
