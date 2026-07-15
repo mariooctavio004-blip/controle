@@ -868,74 +868,140 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 }
 
 /* ============================================================
-   MELHORIA DE LEGIBILIDADE DAS TABELAS
+   LEGIBILIDADE E ALINHAMENTO FINAL DOS CARDS
 ============================================================ */
 
-/* Todas as tabelas */
-.rep-table{
-    font-size:15px;
+/* Títulos de todos os cards maiores e mais legíveis */
+.rep-card-head {
+    min-height: 50px;
+    padding: 10px 14px;
 }
 
-.rep-table th{
-    font-size:13px;
-    font-weight:700;
+.rep-card-title-group {
+    gap: 10px;
 }
 
-.rep-table td{
-    font-size:15px;
-    font-weight:600;
+.rep-card-title-text,
+.rep-card-head > span {
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.15;
 }
 
-/* Altura das linhas */
-.rep-table tbody tr{
-    height:46px;
+.rep-card-subtitle {
+    font-size: 10px;
+    font-weight: 750;
 }
 
-/* Cabeçalhos */
-.rep-card-head{
-    min-height:46px;
-    font-size:18px;
-    font-weight:700;
+.rep-card-icon {
+    font-size: 17px;
 }
 
-/* Ícones */
-.rep-icon{
-    transform:scale(1.12);
+/* Textos e números das tabelas um pouco maiores */
+.rep-table {
+    font-size: 11px;
+}
+
+.rep-table th {
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.rep-table td {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Ícones de status maiores sem deformar as linhas */
+.rep-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    transform: none;
 }
 
 /* ============================================================
-   MAPA MENSAL
+   MAPA MENSAL — MESMA ALTURA DO DIÁRIO
 ============================================================ */
 
-.rep-card:has(.rep-table-monthly){
-    display:flex;
-    flex-direction:column;
+.rep-card:has(.rep-table-monthly) {
+    height: var(--altura-cards-diario-divergencias) !important;
+    min-height: var(--altura-cards-diario-divergencias) !important;
+    max-height: var(--altura-cards-diario-divergencias) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
 }
 
-.rep-table-monthly{
-    width:100%;
-    height:100%;
-    table-layout:fixed;
+.rep-card:has(.rep-table-monthly) .rep-table-wrapper {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
 }
 
-.rep-table-monthly tbody tr{
-    height:46px;
+.rep-table-monthly {
+    width: 100% !important;
+    height: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
 }
 
-.rep-table-monthly th:first-child{
-    width:160px;
+.rep-table-monthly thead {
+    height: 34px;
 }
 
-.rep-table-monthly th:last-child{
-    width:auto;
+.rep-table-monthly tfoot {
+    height: 34px;
 }
 
-.rep-table-monthly td{
-    font-size:15px;
-    font-weight:600;
+.rep-table-monthly tbody tr {
+    height: calc(
+        (var(--altura-cards-diario-divergencias) - 50px - 34px - 34px)
+        / 10
+    );
 }
 
-/* Faz o card ocupar exatamente a mesma altura dos demais */
-.rep-card:has(.rep-table-monthly){
-    min-height:100%;
+.rep-table-monthly th,
+.rep-table-monthly td {
+    padding: 5px 6px !important;
+    line-height: 1.1;
+}
+
+.rep-table-monthly th.farm-col,
+.rep-table-monthly td.farm-col {
+    width: 28%;
+    min-width: 0;
+}
+
+.rep-table-monthly th.pend-col,
+.rep-table-monthly td.pend-col {
+    width: auto;
+}
+
+/* Mantém Diário, Mensal e Divergências iguais na mesma linha */
+.rep-card[data-panel="diario"],
+.rep-card[data-panel="divergencias"],
+.rep-card-divergencias,
+.rep-card:has(.rep-table-monthly) {
+    height: var(--altura-cards-diario-divergencias) !important;
+    min-height: var(--altura-cards-diario-divergencias) !important;
+    max-height: var(--altura-cards-diario-divergencias) !important;
+}
+
+/* Em telas pequenas, os cards voltam à altura natural */
+@media (max-width: 820px) {
+    .rep-card:has(.rep-table-monthly) {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    .rep-table-monthly {
+        height: auto !important;
+    }
+
+    .rep-table-monthly tbody tr {
+        height: auto !important;
+    }
 }
