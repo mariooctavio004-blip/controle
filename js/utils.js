@@ -2,16 +2,6 @@
 // UTILITÁRIOS
 // ==========================================
 
-function panelIconHTML(key) {
-
-    const icon = PANEL_ICONS[key];
-
-    return icon
-        ? `<span class="rep-card-icon">${icon}</span>`
-        : "";
-
-}
-
 function normalizeName(value) {
 
     return String(value ?? "")
