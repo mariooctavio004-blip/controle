@@ -273,45 +273,56 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 
 
 /* ============================================================
-   ALINHAMENTO FINAL DAS TABELAS
-   Sem altura fixa e sem espaço em branco.
+   ALINHAMENTO DAS TABELAS DIÁRIAS NA TELA
 ============================================================ */
 
-/* O grid não estica os cards artificialmente */
-.rep-grid {
-    align-items: start;
-    grid-auto-rows: auto;
+.rep-table-daily {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
 }
 
-/* Todos os cards usam apenas a altura real do conteúdo */
-.rep-card {
-    display: block;
-    height: auto !important;
-    min-height: 0 !important;
+/* Coluna Fazenda */
+.rep-table-daily th.farm-col,
+.rep-table-daily td.farm-col {
+    width: 28%;
+    min-width: 0;
 }
 
-/* Nenhuma tabela recebe área vazia */
-.rep-table-wrapper {
-    display: block;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow-x: auto;
-    overflow-y: visible;
+/* Colunas dos dias */
+.rep-table-daily th:not(.farm-col):not(.pend-col),
+.rep-table-daily td:not(.farm-col):not(.pend-col) {
+    width: auto;
+    text-align: center;
 }
 
-/* Cabeçalhos e rodapés não ficam flutuando */
-.rep-table thead,
-.rep-table tfoot {
-    position: static !important;
+/* Coluna Pendências */
+.rep-table-daily th.pend-col,
+.rep-table-daily td.pend-col,
+.rep-table-daily .total-pending-cell {
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
 }
 
-/* As tabelas normais terminam exatamente na linha PENDÊNCIAS */
-.rep-card-daily .rep-table,
-.rep-card-monthly .rep-table {
-    height: auto !important;
+/* Impede que textos alterem o tamanho das colunas */
+.rep-table-daily th,
+.rep-table-daily td {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
+/* Mantém os ícones centralizados */
+.rep-table-daily .rep-icon {
+    margin: 0 auto;
+}
+
+/* Divergências continua com estrutura própria */
+.rep-table-diverg {
+    width: 100%;
+    table-layout: fixed;
+}
 /* ============================================================
    DIVERGÊNCIAS
    Compactada para alinhar visualmente com a tabela ao lado.
