@@ -671,70 +671,87 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
     }
 }
 
-
 /* ============================================================
-   CORREÇÃO DOS BOTÕES DE DIA E PREENCHIMENTO MANUAL
+   AÇÕES DOS DIAS DO RELATÓRIO — VERSÃO FINAL
 ============================================================ */
 
-.day-actions{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
+.day-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 10px;
 }
 
-#dayList{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    width:100%;
-    margin-bottom:10px;
+#dayList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 0;
 }
 
-#dayList:empty{
-    display:none;
-}
-
-#dayList .chip{
-    display:flex;
+#dayList:empty {
+    display: none;
 }
 
 #addDayBtn,
-#enableManualEntryBtn{
-    display:inline-flex !important;
-    align-items:center;
-    justify-content:center;
-    width:auto !important;
-    min-width:170px;
-    min-height:36px;
+#enableManualEntryBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 170px;
+    min-height: 36px;
+    margin: 0;
 }
 
-#addDayBtn{
-    margin-right:0;
+#addDayBtn {
+    color: var(--navy);
+    background: #ffffff;
+    border: 1px dashed var(--border-strong);
 }
 
-.manual-entry-btn{
-    color:#102a56;
-    background:#edf3ff;
-    border:1px dashed #b9caec;
+.manual-entry-btn {
+    color: #102a56;
+    background: #edf3ff;
+    border: 1px dashed #b9caec;
 }
 
-.manual-entry-btn:hover{
-    color:#fff;
-    background:#102a56;
-    border-color:#102a56;
+#addDayBtn:hover,
+.manual-entry-btn:hover {
+    color: #ffffff;
+    background: #102a56;
+    border-color: #102a56;
 }
 
-#enableManualEntryBtn.is-active{
-    color:#fff;
-    background:#102a56;
-    border-color:#102a56;
+#enableManualEntryBtn.is-active {
+    color: #ffffff;
+    background: #102a56;
+    border-color: #102a56;
 }
 
-button:empty{
-    display:none !important;
+.day-actions > :empty,
+.config-card > button:empty,
+.config-card > label:empty {
+    display: none !important;
 }
 
-.day-actions>*:empty{
-    display:none !important;
+/* Período visível na exportação */
+.rep-period-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    min-width: max-content;
+    white-space: nowrap;
+}
+
+.rep-period-label,
+#periodDisplay {
+    display: inline-block;
+    color: #102a56;
+    font-weight: 900;
+    white-space: nowrap;
 }
