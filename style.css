@@ -385,3 +385,161 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 .rep-card .rep-table {
     flex: none !important;
 }
+
+/* ============================================================
+   AJUSTE FINAL — DIÁRIO E DIVERGÊNCIAS
+   Mantém os dois cards exatamente com a mesma altura.
+============================================================ */
+
+:root {
+    --altura-cards-diario-divergencias: 548px;
+}
+
+/* Somente Diário e Divergências recebem altura fixa igual */
+.rep-card[data-panel="diario"],
+.rep-card[data-panel="divergencias"],
+.rep-card-divergencias {
+    height: var(--altura-cards-diario-divergencias) !important;
+    min-height: var(--altura-cards-diario-divergencias) !important;
+    max-height: var(--altura-cards-diario-divergencias) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* A área das tabelas ocupa todo o espaço restante dos cards */
+.rep-card[data-panel="diario"] .rep-table-wrapper,
+.rep-card[data-panel="divergencias"] .rep-table-wrapper,
+.rep-card-divergencias .rep-table-wrapper {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
+}
+
+/* As duas tabelas ocupam toda a altura disponível */
+.rep-card[data-panel="diario"] .rep-table,
+.rep-card[data-panel="divergencias"] .rep-table,
+.rep-card-divergencias .rep-table,
+.rep-table-diverg {
+    width: 100% !important;
+    height: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+}
+
+/* Distribui as linhas do Diário para preencher o mesmo tamanho */
+.rep-card[data-panel="diario"] .rep-table thead {
+    height: 30px;
+}
+
+.rep-card[data-panel="diario"] .rep-table tfoot {
+    height: 34px;
+}
+
+.rep-card[data-panel="diario"] .rep-table tbody tr {
+    height: calc(
+        (var(--altura-cards-diario-divergencias) - 42px - 30px - 34px)
+        / 10
+    );
+}
+
+/* Divergências nunca cresce quando os valores são preenchidos */
+.rep-card[data-panel="divergencias"] .rep-table thead,
+.rep-card-divergencias .rep-table thead {
+    height: 55px;
+}
+
+.rep-card[data-panel="divergencias"] .rep-table tfoot,
+.rep-card-divergencias .rep-table tfoot {
+    height: 34px;
+}
+
+.rep-card[data-panel="divergencias"] .rep-table tbody tr,
+.rep-card-divergencias .rep-table tbody tr {
+    height: calc(
+        (var(--altura-cards-diario-divergencias) - 42px - 55px - 34px)
+        / 10
+    ) !important;
+}
+
+/* Impede que conteúdo ou inputs alterem a altura das linhas */
+.rep-card[data-panel="divergencias"] .rep-table th,
+.rep-card[data-panel="divergencias"] .rep-table td,
+.rep-card-divergencias .rep-table th,
+.rep-card-divergencias .rep-table td {
+    padding: 3px 4px !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+.rep-card[data-panel="divergencias"] .num-input,
+.rep-card-divergencias .num-input,
+.rep-table-diverg .num-input {
+    width: 64px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    padding: 0 5px !important;
+    line-height: 30px !important;
+    font-size: 10px !important;
+}
+
+/* Números das colunas DIFERENÇA sempre em negrito */
+.rep-card[data-panel="divergencias"] .diff-val,
+.rep-card-divergencias .diff-val,
+.rep-table-diverg .diff-val,
+.rep-table-diverg td.diff-val,
+.rep-table-diverg tfoot td.diff-val {
+    font-weight: 900 !important;
+}
+
+/* Nova cor do rodapé TOTAL da tabela de Divergências */
+.rep-card[data-panel="divergencias"] .pend-row-navy td,
+.rep-card-divergencias .pend-row-navy td,
+.rep-table-diverg .pend-row-navy td {
+    color: #ffffff !important;
+    background: #173c74 !important;
+    font-weight: 900 !important;
+}
+
+/* Destaque do texto TOTAL */
+.rep-card[data-panel="divergencias"] .pend-row-navy td.farm-col,
+.rep-card-divergencias .pend-row-navy td.farm-col,
+.rep-table-diverg .pend-row-navy td.farm-col {
+    color: #f4d38f !important;
+    background: #173c74 !important;
+    font-weight: 900 !important;
+}
+
+/* Os totais das diferenças ficam brancos e em negrito */
+.rep-card[data-panel="divergencias"] .pend-row-navy .diff-val,
+.rep-card-divergencias .pend-row-navy .diff-val,
+.rep-table-diverg .pend-row-navy .diff-val {
+    color: #ffffff !important;
+    font-weight: 900 !important;
+}
+
+/* Em telas menores, remove a altura fixa */
+@media (max-width: 820px) {
+    .rep-card[data-panel="diario"],
+    .rep-card[data-panel="divergencias"],
+    .rep-card-divergencias {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    .rep-card[data-panel="diario"] .rep-table,
+    .rep-card[data-panel="divergencias"] .rep-table,
+    .rep-card-divergencias .rep-table {
+        height: auto !important;
+    }
+
+    .rep-card[data-panel="diario"] .rep-table tbody tr,
+    .rep-card[data-panel="divergencias"] .rep-table tbody tr,
+    .rep-card-divergencias .rep-table tbody tr {
+        height: auto !important;
+    }
+}
