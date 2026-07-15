@@ -46,3 +46,4 @@ const PANEL_LABELS = {
     diario: "Diário de Campo",
     divergencias: "Divergências entre Diário e Sistema"
 };
+const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
