@@ -112,7 +112,15 @@ const defaultState = {
 
     filterStart: "",
 
-    filterEnd: ""
+    filterEnd: "",
+
+manualEntryEnabled: false,
+
+dailyDataReady: {
+    campo: false,
+    abastecimento: false,
+    diario: false
+}
 };
 
 let state = null;
