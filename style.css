@@ -776,7 +776,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
  * Não altera o tamanho normal do relatório na tela.
  */
 #report.export-capture {
-    width: 1800px !important;
+    width: 2400px !important;
     max-width: none !important;
     overflow: visible !important;
 }
@@ -829,82 +829,84 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
    AUMENTO DE LEGIBILIDADE SOMENTE NA IMAGEM EXPORTADA
 ============================================================ */
 
-/* Títulos dos cards */
-#report.export-capture .rep-card-title-text,
-#report.export-capture .rep-card-head > span {
-    font-size: 15px !important;
-    font-weight: 900 !important;
-    line-height: 1.15 !important;
+/* Cabeçalho principal */
+#report.export-capture .rep-title{
+    font-size:42px !important;
 }
 
-#report.export-capture .rep-card-subtitle {
-    font-size: 11px !important;
-    font-weight: 800 !important;
+#report.export-capture .rep-period-box{
+    font-size:20px !important;
+    padding:10px 18px !important;
 }
 
-/* Cabeçalhos das tabelas: Fazenda, datas, Pendências, Status etc. */
-#report.export-capture .rep-table th {
-    font-size: 12px !important;
-    font-weight: 900 !important;
+#report.export-capture .rep-banner{
+    font-size:18px !important;
+    padding:14px 18px !important;
 }
 
-/* Textos e números das células */
-#report.export-capture .rep-table td {
-    font-size: 13px !important;
-    font-weight: 750 !important;
+/* Título dos cards */
+#report.export-capture .rep-card-head{
+    min-height:58px !important;
 }
 
-/* Nomes das fazendas com destaque adicional */
-#report.export-capture .rep-table td.farm-col {
-    font-size: 13px !important;
-    font-weight: 850 !important;
+#report.export-capture .rep-card-icon{
+    font-size:24px !important;
 }
 
-/* Números de pendências e totais */
+#report.export-capture .rep-card-title-text{
+    font-size:20px !important;
+    font-weight:900 !important;
+    line-height:1.2 !important;
+}
+
+#report.export-capture .rep-card-subtitle{
+    font-size:15px !important;
+}
+
+/* Cabeçalhos das tabelas */
+#report.export-capture .rep-table th{
+    font-size:15px !important;
+    font-weight:900 !important;
+    padding:10px 6px !important;
+}
+
+/* Texto das linhas */
+#report.export-capture .rep-table td{
+    font-size:16px !important;
+    padding:9px 6px !important;
+}
+
+/* Fazenda */
+#report.export-capture .rep-table td.farm-col{
+    font-size:17px !important;
+    font-weight:900 !important;
+}
+
+/* Pendências */
 #report.export-capture .rep-total,
-#report.export-capture .total-pending-cell,
-#report.export-capture .pend-row td,
-#report.export-capture .diff-val,
-#report.export-capture .num-print-value {
-    font-size: 13px !important;
-    font-weight: 900 !important;
+#report.export-capture .total-pending-cell{
+    font-size:17px !important;
+    font-weight:900 !important;
 }
 
-/* Números do painel de Divergências */
-#report.export-capture .rep-table-diverg td,
-#report.export-capture .rep-table-diverg .diff-val {
-    font-size: 12px !important;
+/* Ícones */
+#report.export-capture .rep-icon{
+    width:30px !important;
+    height:30px !important;
+    font-size:16px !important;
 }
 
-/* Ícones levemente maiores somente na imagem */
-#report.export-capture .rep-icon {
-    width: 26px !important;
-    height: 26px !important;
-    font-size: 12px !important;
+/* Divergências */
+#report.export-capture .num-input{
+    width:72px !important;
+    height:34px !important;
+    font-size:16px !important;
+    font-weight:800 !important;
 }
 
-/* Período sempre visível na imagem */
-#report.export-capture .rep-period-box {
-    display: inline-flex !important;
-    align-items: center !important;
-    min-width: 245px !important;
-    width: auto !important;
-    padding: 9px 14px !important;
-    color: #102a56 !important;
-    background: #ffffff !important;
-    font-size: 13px !important;
-    font-weight: 900 !important;
-    line-height: 1 !important;
-    white-space: nowrap !important;
-}
-
-/* Não deixa a tabela de Divergências aumentar ao receber valores */
-#report.export-capture .rep-table-diverg {
-    table-layout: fixed !important;
-}
-
-#report.export-capture .rep-table-diverg .diff-val {
-    font-weight: 900 !important;
+#report.export-capture .diff-val{
+    font-size:16px !important;
+    font-weight:900 !important;
 }
 
 /* ============================================================
