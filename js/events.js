@@ -129,6 +129,10 @@ function bindConfigurationFields() {
 function createUniqueFarmName() {
     const baseName = "Nova fazenda";
 
+    if (!Array.isArray(state.farms)) {
+        state.farms = [];
+    }
+
     if (!state.farms.includes(baseName)) {
         return baseName;
     }
@@ -145,6 +149,10 @@ function createUniqueFarmName() {
 function createUniqueDayLabel() {
     const baseLabel = "--/--";
 
+    if (!Array.isArray(state.days)) {
+        state.days = [];
+    }
+
     if (!state.days.includes(baseLabel)) {
         return baseLabel;
     }
@@ -158,173 +166,249 @@ function createUniqueDayLabel() {
     return `${baseLabel} ${number}`;
 }
 
-function bindFarmAndDayButtons() {
-    const addFarmButton =
-        document.getElementById("addFarmBtn");
+function normalizeControlText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toUpperCase();
+}
+
+/*
+ * Corrige definitivamente a área dos botões de dias.
+ * Remove o botão vazio antigo e cria dois botões reais,
+ * inteiros e clicáveis.
+ */
+function ensureDayActionButtons() {
+    const dayList =
+        document.getElementById("dayList");
+
+    if (!dayList) {
+        return {
+            addDayButton: null,
+            manualButton: null
+        };
+    }
+
+    const card =
+        dayList.closest(".config-card") ||
+        dayList.parentElement;
+
+    if (!card) {
+        return {
+            addDayButton: null,
+            manualButton: null
+        };
+    }
+
+    let actions =
+        card.querySelector(".day-actions");
+
+    if (!actions) {
+        actions = document.createElement("div");
+        actions.className = "day-actions";
+
+        dayList.insertAdjacentElement(
+            "afterend",
+            actions
+        );
+    }
+
+    /*
+     * Remove controles antigos, inclusive:
+     * - quadrado branco vazio;
+     * - botão visual sem função;
+     * - cópias duplicadas.
+     */
+    [...card.querySelectorAll(
+        "#addDayBtn, #enableManualEntryBtn, " +
+        "button, label, a"
+    )].forEach(element => {
+        if (element.closest("#dayList")) {
+            return;
+        }
+
+        const textValue =
+            normalizeControlText(
+                element.textContent
+            );
+
+        const isDayControl =
+            element.id === "addDayBtn" ||
+            element.id === "enableManualEntryBtn" ||
+            textValue.includes("ADICIONAR DIA") ||
+            textValue.includes("PREENCHER MANUALMENTE") ||
+            textValue.includes("OCULTAR PREENCHIMENTO MANUAL");
+
+        const isEmptyControl =
+            !textValue &&
+            (
+                element.matches("button") ||
+                element.matches("label") ||
+                element.matches("a")
+            );
+
+        if (
+            (isDayControl || isEmptyControl) &&
+            !element.closest(".chip")
+        ) {
+            element.remove();
+        }
+    });
 
     const addDayButton =
-        document.getElementById("addDayBtn");
+        document.createElement("button");
+
+    addDayButton.id = "addDayBtn";
+    addDayButton.type = "button";
+    addDayButton.className = "add-chip";
+    addDayButton.textContent = "+ Adicionar dia";
+
+    const manualButton =
+        document.createElement("button");
+
+    manualButton.id =
+        "enableManualEntryBtn";
+
+    manualButton.type = "button";
+    manualButton.className =
+        "add-chip manual-entry-btn";
+
+    actions.replaceChildren(
+        addDayButton,
+        manualButton
+    );
+
+    updateManualEntryButton(
+        manualButton
+    );
+
+    return {
+        addDayButton,
+        manualButton
+    };
+}
+
+function addFarm() {
+    if (!Array.isArray(state.farms)) {
+        state.farms = [];
+    }
+
+    state.farms.push(
+        createUniqueFarmName()
+    );
+
+    ensureData();
+    renderAll();
+    saveState();
+
+    requestAnimationFrame(() => {
+        const inputs =
+            document.querySelectorAll(
+                "#farmList input"
+            );
+
+        const lastInput =
+            inputs[inputs.length - 1];
+
+        if (lastInput) {
+            lastInput.focus();
+            lastInput.select();
+        }
+    });
+}
+
+function addDay() {
+    if (!Array.isArray(state.days)) {
+        state.days = [];
+    }
+
+    state.days = state.days.filter(day =>
+        String(day ?? "").trim()
+    );
+
+    state.days.push(
+        createUniqueDayLabel()
+    );
+
+    ensureData();
+    renderAll();
+    saveState();
+
+    requestAnimationFrame(() => {
+        const inputs =
+            document.querySelectorAll(
+                "#dayList input"
+            );
+
+        const lastInput =
+            inputs[inputs.length - 1];
+
+        if (lastInput) {
+            lastInput.focus();
+            lastInput.select();
+        }
+    });
+}
+
+function bindFarmAndDayButtons() {
+    const addFarmButton =
+        document.getElementById(
+            "addFarmBtn"
+        );
 
     if (
         addFarmButton &&
         addFarmButton.dataset.boundAddFarm !== "true"
     ) {
-        addFarmButton.dataset.boundAddFarm = "true";
         addFarmButton.type = "button";
-
-        addFarmButton.addEventListener("click", () => {
-            if (!Array.isArray(state.farms)) {
-                state.farms = [];
-            }
-
-            state.farms.push(createUniqueFarmName());
-
-            ensureData();
-            renderAll();
-            saveState();
-
-            requestAnimationFrame(() => {
-                const inputs =
-                    document.querySelectorAll("#farmList input");
-
-                const lastInput =
-                    inputs[inputs.length - 1];
-
-                if (lastInput) {
-                    lastInput.focus();
-                    lastInput.select();
-                }
-            });
-        });
+        addFarmButton.dataset.boundAddFarm = "true";
+        addFarmButton.addEventListener(
+            "click",
+            addFarm
+        );
     }
 
-    if (
-        addDayButton &&
-        addDayButton.dataset.boundAddDay !== "true"
-    ) {
-        addDayButton.dataset.boundAddDay = "true";
-        addDayButton.type = "button";
+    const {
+        addDayButton,
+        manualButton
+    } = ensureDayActionButtons();
 
-        addDayButton.addEventListener("click", () => {
-            if (!Array.isArray(state.days)) {
-                state.days = [];
-            }
+    if (addDayButton) {
+        addDayButton.addEventListener(
+            "click",
+            addDay
+        );
+    }
 
-            state.days = state.days.filter(day =>
-                String(day ?? "").trim()
-            );
-
-            state.days.push(createUniqueDayLabel());
-
-            ensureData();
-            renderAll();
-            saveState();
-
-            requestAnimationFrame(() => {
-                const inputs =
-                    document.querySelectorAll("#dayList input");
-
-                const lastInput =
-                    inputs[inputs.length - 1];
-
-                if (lastInput) {
-                    lastInput.focus();
-                    lastInput.select();
-                }
-            });
-        });
+    if (manualButton) {
+        manualButton.addEventListener(
+            "click",
+            toggleManualEntry
+        );
     }
 }
-
 
 
 /* ============================================================
    PREENCHIMENTO MANUAL DOS PAINÉIS DIÁRIOS
 ============================================================ */
 
-function removeEmptyDayControls() {
-    const dayList =
-        document.getElementById("dayList");
-
-    if (dayList) {
-        dayList
-            .querySelectorAll(".chip")
-            .forEach(chip => {
-                const input =
-                    chip.querySelector("input");
-
-                if (
-                    !input ||
-                    !String(input.value || "").trim()
-                ) {
-                    chip.remove();
-                }
-            });
-    }
-
-    const addDayButton =
-        document.getElementById("addDayBtn");
-
-    const container =
-        addDayButton?.parentElement;
-
-    if (!container) return;
-
-    [...container.children].forEach(element => {
-        if (
-            element === addDayButton ||
-            element.id === "enableManualEntryBtn" ||
-            element.id === "dayList"
-        ) {
-            return;
-        }
-
-        if (
-            element.matches("button") &&
-            !String(element.textContent || "").trim()
-        ) {
-            element.remove();
-        }
-    });
-}
-
-function ensureManualEntryButton() {
-    const addDayButton =
-        document.getElementById("addDayBtn");
-
-    if (!addDayButton) return null;
-
-    removeEmptyDayControls();
-
-    let button =
-        document.getElementById("enableManualEntryBtn");
-
-    if (!button) {
-        button = document.createElement("button");
-        button.id = "enableManualEntryBtn";
-        button.type = "button";
-        button.className =
-            "add-chip manual-entry-btn";
-
-        addDayButton.insertAdjacentElement(
-            "afterend",
-            button
-        );
-    }
-
-    updateManualEntryButton();
-
-    return button;
-}
-
-function updateManualEntryButton() {
+function updateManualEntryButton(
+    receivedButton = null
+) {
     const button =
-        document.getElementById("enableManualEntryBtn");
+        receivedButton ||
+        document.getElementById(
+            "enableManualEntryBtn"
+        );
 
     if (!button) return;
 
     const enabled =
-        Boolean(state?.manualEntryEnabled);
+        Boolean(
+            state?.manualEntryEnabled
+        );
 
     button.classList.toggle(
         "is-active",
@@ -349,15 +433,20 @@ function toggleManualEntry() {
         showInlineWarning(
             "Escolha Hoje, Últimos 7 dias ou informe um período antes de preencher manualmente."
         );
+
         return;
     }
 
     state.manualEntryEnabled =
-        !Boolean(state.manualEntryEnabled);
+        !Boolean(
+            state.manualEntryEnabled
+        );
 
     ensureData();
     renderAll();
     saveState();
+
+    updateManualEntryButton();
 
     showInlineWarning(
         state.manualEntryEnabled
@@ -366,26 +455,15 @@ function toggleManualEntry() {
     );
 }
 
+/*
+ * Os eventos dos dois botões já são registrados por
+ * bindFarmAndDayButtons(). Esta função permanece para
+ * compatibilidade com initializeEvents().
+ */
 function bindManualEntryEvents() {
-    const button =
-        ensureManualEntryButton();
-
-    if (!button) return;
-
-    if (
-        button.dataset.boundManualEntry === "true"
-    ) {
-        updateManualEntryButton();
-        return;
-    }
-
-    button.dataset.boundManualEntry = "true";
-
-    button.addEventListener(
-        "click",
-        toggleManualEntry
-    );
+    updateManualEntryButton();
 }
+
 
 /* ============================================================
    CONFIRMAÇÃO DE LIMPEZA
@@ -749,7 +827,8 @@ function restoreInputsAfterCapture() {
 }
 
 async function generateCanvas() {
-    const report = getElement("report");
+    const report =
+        getElement("report");
 
     if (!report) {
         throw new Error(
@@ -757,20 +836,55 @@ async function generateCanvas() {
         );
     }
 
-    if (typeof html2canvas !== "function") {
+    if (
+        typeof html2canvas !== "function"
+    ) {
         throw new Error(
             "A biblioteca html2canvas não foi carregada."
         );
     }
 
-    /*
-     * Espera as fontes e imagens terminarem de carregar.
-     */
+    const periodDisplay =
+        getElement("periodDisplay");
+
+    if (periodDisplay) {
+        periodDisplay.textContent =
+            state?.period || "";
+    }
+
+    const periodBox =
+        report.querySelector(
+            ".rep-period-box"
+        );
+
+    if (periodBox) {
+        let label =
+            periodBox.querySelector(
+                ".rep-period-label"
+            );
+
+        if (!label) {
+            label =
+                document.createElement(
+                    "span"
+                );
+
+            label.className =
+                "rep-period-label";
+
+            label.textContent =
+                "📅 PERÍODO:";
+
+            periodBox.prepend(label);
+        }
+    }
+
     if (document.fonts?.ready) {
         await document.fonts.ready;
     }
 
-    const images = [...report.querySelectorAll("img")];
+    const images =
+        [...report.querySelectorAll("img")];
 
     await Promise.all(
         images.map(image => {
@@ -794,6 +908,12 @@ async function generateCanvas() {
         })
     );
 
+    await new Promise(resolve => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+        });
+    });
+
     return html2canvas(report, {
         scale: 2,
         backgroundColor: "#ffffff",
@@ -801,7 +921,7 @@ async function generateCanvas() {
         allowTaint: false,
         logging: false,
         scrollX: 0,
-        scrollY: -window.scrollY,
+        scrollY: 0,
         windowWidth: report.scrollWidth,
         windowHeight: report.scrollHeight
     });
