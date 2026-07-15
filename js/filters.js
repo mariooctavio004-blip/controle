@@ -285,6 +285,53 @@ function syncDateInputs() {
 }
 
 
+
+/* ============================================================
+   DATAS DO RELATÓRIO GERADAS PELO FILTRO
+============================================================ */
+
+function buildDayLabelsBetweenDates(startDate, endDate) {
+    if (!startDate || !endDate) {
+        return [];
+    }
+
+    const result = [];
+    const current = new Date(startDate);
+    const limit = new Date(endDate);
+
+    current.setHours(0, 0, 0, 0);
+    limit.setHours(0, 0, 0, 0);
+
+    while (current <= limit) {
+        result.push(formatDateToDayLabel(current));
+        current.setDate(current.getDate() + 1);
+    }
+
+    return result;
+}
+
+function updateReportDaysFromFilter(startDate, endDate) {
+    if (!startDate || !endDate) return;
+
+    const newDays =
+        buildDayLabelsBetweenDates(startDate, endDate);
+
+    if (!newDays.length) return;
+
+    if (typeof remapDailyDataToDays === "function") {
+        remapDailyDataToDays(newDays);
+    } else {
+        state.days = newDays;
+        ensureData();
+    }
+
+    /*
+     * O filtro apenas define os dias do relatório.
+     * Ele NÃO libera as tabelas para preenchimento.
+     */
+    state.manualEntryEnabled = false;
+}
+
 /* ============================================================
    APLICAÇÃO DO FILTRO
 ============================================================ */
@@ -348,6 +395,13 @@ function applyDateFilter(
         state.period =
             `${formatDateToDayLabel(startDate)} ` +
             `A ${formatDateToDayLabel(endDate)}`;
+    }
+
+    if (startDate && endDate) {
+        updateReportDaysFromFilter(
+            startDate,
+            endDate
+        );
     }
 
     syncDateInputs();
