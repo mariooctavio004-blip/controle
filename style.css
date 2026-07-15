@@ -672,7 +672,7 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
 }
 
 /* ============================================================
-   BOTÕES DOS DIAS DO RELATÓRIO
+   CORREÇÃO DOS BOTÕES DE DIA E PREENCHIMENTO MANUAL
 ============================================================ */
 
 .day-actions {
@@ -692,4 +692,26 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
     color: #ffffff;
     background: #102a56;
     border-color: #102a56;
+}
+
+#addDayBtn,
+#enableManualEntryBtn {
+    width: auto;
+    min-width: 0;
+}
+
+#addDayBtn:empty,
+.day-actions > button:empty {
+    display: none !important;
+}
+
+#enableManualEntryBtn.is-active {
+    color: #ffffff;
+    background: #102a56;
+    border-color: #102a56;
+}
+
+#enableManualEntryBtn.is-active:hover {
+    background: #091b3a;
+    border-color: #091b3a;
 }
