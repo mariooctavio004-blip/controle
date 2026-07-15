@@ -671,47 +671,70 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
     }
 }
 
+
 /* ============================================================
    CORREÇÃO DOS BOTÕES DE DIA E PREENCHIMENTO MANUAL
 ============================================================ */
 
-.day-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+.day-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
 }
 
-.manual-entry-btn {
-    color: #102a56;
-    background: #edf3ff;
-    border-color: #b9caec;
+#dayList{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    width:100%;
+    margin-bottom:10px;
 }
 
-.manual-entry-btn:hover {
-    color: #ffffff;
-    background: #102a56;
-    border-color: #102a56;
+#dayList:empty{
+    display:none;
+}
+
+#dayList .chip{
+    display:flex;
 }
 
 #addDayBtn,
-#enableManualEntryBtn {
-    width: auto;
-    min-width: 0;
+#enableManualEntryBtn{
+    display:inline-flex !important;
+    align-items:center;
+    justify-content:center;
+    width:auto !important;
+    min-width:170px;
+    min-height:36px;
 }
 
-#addDayBtn:empty,
-.day-actions > button:empty {
-    display: none !important;
+#addDayBtn{
+    margin-right:0;
 }
 
-#enableManualEntryBtn.is-active {
-    color: #ffffff;
-    background: #102a56;
-    border-color: #102a56;
+.manual-entry-btn{
+    color:#102a56;
+    background:#edf3ff;
+    border:1px dashed #b9caec;
 }
 
-#enableManualEntryBtn.is-active:hover {
-    background: #091b3a;
-    border-color: #091b3a;
+.manual-entry-btn:hover{
+    color:#fff;
+    background:#102a56;
+    border-color:#102a56;
+}
+
+#enableManualEntryBtn.is-active{
+    color:#fff;
+    background:#102a56;
+    border-color:#102a56;
+}
+
+button:empty{
+    display:none !important;
+}
+
+.day-actions>*:empty{
+    display:none !important;
 }
