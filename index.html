@@ -192,464 +192,514 @@
 
 
     <!-- =====================================================
-         MODAL DAS PLANILHAS
-    ====================================================== -->
+     MODAL DAS PLANILHAS
+====================================================== -->
 
-    <div
-        id="workbookModal"
-        class="modal"
-        style="display: none;"
-    >
+<div
+    id="workbookModal"
+    class="modal"
+    style="display: none;"
+    aria-hidden="true"
+>
 
-        <div class="modal-content workbook-modal-content">
+    <div class="modal-content workbook-modal-content">
 
-            <div class="modal-header">
+        <div class="modal-header">
+
+            <div>
+
+                <h2>Planilhas do sistema</h2>
+
+                <p class="modal-subtitle">
+                    Conecte por URL do SharePoint ou importe arquivos do computador.
+                </p>
+
+            </div>
+
+            <button
+                id="closeWorkbookModal"
+                class="modal-close"
+                type="button"
+                aria-label="Fechar"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <!-- =================================================
+             IMPORTAÇÃO PELO COMPUTADOR
+        ================================================== -->
+
+        <section class="local-import-card">
+
+            <div class="local-import-info">
+
+                <span class="local-import-icon">📁</span>
 
                 <div>
 
-                    <h2>Planilhas conectadas</h2>
+                    <strong>Importar arquivo do computador</strong>
 
-                    <p class="modal-subtitle">
-                        Informe uma URL para cada controle.
-                    </p>
+                    <small>
+                        Selecione uma ou várias planilhas Excel.
+                        Não é necessário ter o Excel instalado.
+                    </small>
 
                 </div>
 
-                <button
-                    id="closeWorkbookModal"
-                    class="modal-close"
-                    type="button"
-                    aria-label="Fechar"
-                >
-                    ×
-                </button>
-
             </div>
 
+            <label
+                for="excelFiles"
+                class="btn-secondary local-import-button"
+            >
+                📎 Escolher arquivos
+            </label>
 
-            <div
-                id="workbookList"
-                class="workbook-list"
+            <input
+                type="file"
+                id="excelFiles"
+                accept=".xlsx,.xls"
+                multiple
+                hidden
             >
 
-                <!-- Operações em Campo -->
-
-                <div
-                    class="workbook-card"
-                    data-workbook="campo"
-                >
-
-                    <div class="workbook-card-header">
-
-                        <div class="workbook-title">
-
-                            <span class="workbook-icon">🚜</span>
-
-                            <div>
-
-                                <strong>Operações em Campo</strong>
-
-                                <small>
-                                    Controle diário das operações
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <span
-                            id="campoStatus"
-                            class="workbook-status offline"
-                        >
-                            Não conectado
-                        </span>
-
-                    </div>
-
-                    <label for="campoUrl">
-                        URL da planilha
-                    </label>
-
-                    <div class="workbook-url-row">
-
-                        <input
-                            type="url"
-                            id="campoUrl"
-                            class="workbook-url-input"
-                            placeholder="Cole a URL da planilha de Operações em Campo"
-                            autocomplete="off"
-                        >
-
-                        <button
-                            type="button"
-                            class="btn-primary connect-workbook-btn"
-                            data-id="campo"
-                        >
-                            Conectar
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-danger remove-workbook-btn"
-                            data-id="campo"
-                        >
-                            Remover
-                        </button>
-
-                    </div>
-
-                    <small
-                        id="campoLastSync"
-                        class="workbook-last-sync"
-                    >
-                        Nunca sincronizada
-                    </small>
-
-                </div>
+        </section>
 
 
-                <!-- Abastecimento -->
+        <div class="modal-separator">
 
-                <div
-                    class="workbook-card"
-                    data-workbook="abastecimento"
-                >
+            <span>OU CONECTE PELAS URLs</span>
 
-                    <div class="workbook-card-header">
+        </div>
 
-                        <div class="workbook-title">
 
-                            <span class="workbook-icon">⛽</span>
+        <!-- =================================================
+             PLANILHAS POR URL
+        ================================================== -->
 
-                            <div>
+        <div
+            id="workbookList"
+            class="workbook-list"
+        >
 
-                                <strong>Abastecimento</strong>
+            <!-- Operações em Campo -->
 
-                                <small>
-                                    Controle diário de abastecimento
-                                </small>
+            <div
+                class="workbook-card"
+                data-workbook="campo"
+            >
 
-                            </div>
+                <div class="workbook-card-header">
+
+                    <div class="workbook-title">
+
+                        <span class="workbook-icon">🚜</span>
+
+                        <div>
+
+                            <strong>Operações em Campo</strong>
+
+                            <small>
+                                Controle diário das operações
+                            </small>
 
                         </div>
 
-                        <span
-                            id="abastecimentoStatus"
-                            class="workbook-status offline"
-                        >
-                            Não conectado
-                        </span>
-
                     </div>
 
-                    <label for="abastecimentoUrl">
-                        URL da planilha
-                    </label>
-
-                    <div class="workbook-url-row">
-
-                        <input
-                            type="url"
-                            id="abastecimentoUrl"
-                            class="workbook-url-input"
-                            placeholder="Cole a URL da planilha de Abastecimento"
-                            autocomplete="off"
-                        >
-
-                        <button
-                            type="button"
-                            class="btn-primary connect-workbook-btn"
-                            data-id="abastecimento"
-                        >
-                            Conectar
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-danger remove-workbook-btn"
-                            data-id="abastecimento"
-                        >
-                            Remover
-                        </button>
-
-                    </div>
-
-                    <small
-                        id="abastecimentoLastSync"
-                        class="workbook-last-sync"
+                    <span
+                        id="campoStatus"
+                        class="workbook-status offline"
                     >
-                        Nunca sincronizada
-                    </small>
+                        Não conectado
+                    </span>
 
                 </div>
 
+                <label for="campoUrl">
+                    URL da planilha
+                </label>
 
-                <!-- Diário de Campo -->
+                <div class="workbook-url-row">
 
-                <div
-                    class="workbook-card"
-                    data-workbook="diario"
+                    <input
+                        type="url"
+                        id="campoUrl"
+                        class="workbook-url-input"
+                        placeholder="Cole a URL de Operações em Campo"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn-primary connect-workbook-btn"
+                        data-id="campo"
+                    >
+                        Conectar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-danger remove-workbook-btn"
+                        data-id="campo"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+                <small
+                    id="campoLastSync"
+                    class="workbook-last-sync"
                 >
-
-                    <div class="workbook-card-header">
-
-                        <div class="workbook-title">
-
-                            <span class="workbook-icon">📋</span>
-
-                            <div>
-
-                                <strong>Diário de Campo</strong>
-
-                                <small>
-                                    Manejo e rebanho
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <span
-                            id="diarioStatus"
-                            class="workbook-status offline"
-                        >
-                            Não conectado
-                        </span>
-
-                    </div>
-
-                    <label for="diarioUrl">
-                        URL da planilha
-                    </label>
-
-                    <div class="workbook-url-row">
-
-                        <input
-                            type="url"
-                            id="diarioUrl"
-                            class="workbook-url-input"
-                            placeholder="Cole a URL da planilha do Diário de Campo"
-                            autocomplete="off"
-                        >
-
-                        <button
-                            type="button"
-                            class="btn-primary connect-workbook-btn"
-                            data-id="diario"
-                        >
-                            Conectar
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-danger remove-workbook-btn"
-                            data-id="diario"
-                        >
-                            Remover
-                        </button>
-
-                    </div>
-
-                    <small
-                        id="diarioLastSync"
-                        class="workbook-last-sync"
-                    >
-                        Nunca sincronizada
-                    </small>
-
-                </div>
-
-
-                <!-- Mapa Mensal -->
-
-                <div
-                    class="workbook-card"
-                    data-workbook="mensal"
-                >
-
-                    <div class="workbook-card-header">
-
-                        <div class="workbook-title">
-
-                            <span class="workbook-icon">🐄</span>
-
-                            <div>
-
-                                <strong>Mapa Mensal do Rebanho</strong>
-
-                                <small>
-                                    Fechamento mensal
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <span
-                            id="mensalStatus"
-                            class="workbook-status offline"
-                        >
-                            Não conectado
-                        </span>
-
-                    </div>
-
-                    <label for="mensalUrl">
-                        URL da planilha
-                    </label>
-
-                    <div class="workbook-url-row">
-
-                        <input
-                            type="url"
-                            id="mensalUrl"
-                            class="workbook-url-input"
-                            placeholder="Cole a URL do Mapa Mensal do Rebanho"
-                            autocomplete="off"
-                        >
-
-                        <button
-                            type="button"
-                            class="btn-primary connect-workbook-btn"
-                            data-id="mensal"
-                        >
-                            Conectar
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-danger remove-workbook-btn"
-                            data-id="mensal"
-                        >
-                            Remover
-                        </button>
-
-                    </div>
-
-                    <small
-                        id="mensalLastSync"
-                        class="workbook-last-sync"
-                    >
-                        Nunca sincronizada
-                    </small>
-
-                </div>
-
-
-                <!-- Divergências -->
-
-                <div
-                    class="workbook-card"
-                    data-workbook="divergencias"
-                >
-
-                    <div class="workbook-card-header">
-
-                        <div class="workbook-title">
-
-                            <span class="workbook-icon">⚖️</span>
-
-                            <div>
-
-                                <strong>
-                                    Divergências Diário × Sistema
-                                </strong>
-
-                                <small>
-                                    Comparação dos dados
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <span
-                            id="divergenciasStatus"
-                            class="workbook-status offline"
-                        >
-                            Não conectado
-                        </span>
-
-                    </div>
-
-                    <label for="divergenciasUrl">
-                        URL da planilha
-                    </label>
-
-                    <div class="workbook-url-row">
-
-                        <input
-                            type="url"
-                            id="divergenciasUrl"
-                            class="workbook-url-input"
-                            placeholder="Cole a URL da planilha de Divergências"
-                            autocomplete="off"
-                        >
-
-                        <button
-                            type="button"
-                            class="btn-primary connect-workbook-btn"
-                            data-id="divergencias"
-                        >
-                            Conectar
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn-danger remove-workbook-btn"
-                            data-id="divergencias"
-                        >
-                            Remover
-                        </button>
-
-                    </div>
-
-                    <small
-                        id="divergenciasLastSync"
-                        class="workbook-last-sync"
-                    >
-                        Nunca sincronizada
-                    </small>
-
-                </div>
+                    Nunca sincronizada
+                </small>
 
             </div>
 
 
-            <div class="modal-actions">
+            <!-- Abastecimento -->
 
-                <button
-                    id="syncAllWorkbooksBtn"
-                    class="btn-primary"
-                    type="button"
+            <div
+                class="workbook-card"
+                data-workbook="abastecimento"
+            >
+
+                <div class="workbook-card-header">
+
+                    <div class="workbook-title">
+
+                        <span class="workbook-icon">⛽</span>
+
+                        <div>
+
+                            <strong>Abastecimento</strong>
+
+                            <small>
+                                Controle diário de abastecimento
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <span
+                        id="abastecimentoStatus"
+                        class="workbook-status offline"
+                    >
+                        Não conectado
+                    </span>
+
+                </div>
+
+                <label for="abastecimentoUrl">
+                    URL da planilha
+                </label>
+
+                <div class="workbook-url-row">
+
+                    <input
+                        type="url"
+                        id="abastecimentoUrl"
+                        class="workbook-url-input"
+                        placeholder="Cole a URL de Abastecimento"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn-primary connect-workbook-btn"
+                        data-id="abastecimento"
+                    >
+                        Conectar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-danger remove-workbook-btn"
+                        data-id="abastecimento"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+                <small
+                    id="abastecimentoLastSync"
+                    class="workbook-last-sync"
                 >
-                    🔄 Sincronizar todas
-                </button>
+                    Nunca sincronizada
+                </small>
 
-                <button
-                    id="closeWorkbookModalBottom"
-                    class="btn-secondary"
-                    type="button"
+            </div>
+
+
+            <!-- Diário de Campo -->
+
+            <div
+                class="workbook-card"
+                data-workbook="diario"
+            >
+
+                <div class="workbook-card-header">
+
+                    <div class="workbook-title">
+
+                        <span class="workbook-icon">📋</span>
+
+                        <div>
+
+                            <strong>Diário de Campo</strong>
+
+                            <small>
+                                Manejo e rebanho
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <span
+                        id="diarioStatus"
+                        class="workbook-status offline"
+                    >
+                        Não conectado
+                    </span>
+
+                </div>
+
+                <label for="diarioUrl">
+                    URL da planilha
+                </label>
+
+                <div class="workbook-url-row">
+
+                    <input
+                        type="url"
+                        id="diarioUrl"
+                        class="workbook-url-input"
+                        placeholder="Cole a URL do Diário de Campo"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn-primary connect-workbook-btn"
+                        data-id="diario"
+                    >
+                        Conectar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-danger remove-workbook-btn"
+                        data-id="diario"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+                <small
+                    id="diarioLastSync"
+                    class="workbook-last-sync"
                 >
-                    Fechar
-                </button>
+                    Nunca sincronizada
+                </small>
 
-                <!-- Mantido para compatibilidade com códigos antigos -->
+            </div>
 
-                <button
-                    id="disconnectWorkbook"
-                    type="button"
-                    style="display: none;"
+
+            <!-- Mapa Mensal -->
+
+            <div
+                class="workbook-card"
+                data-workbook="mensal"
+            >
+
+                <div class="workbook-card-header">
+
+                    <div class="workbook-title">
+
+                        <span class="workbook-icon">🐄</span>
+
+                        <div>
+
+                            <strong>Mapa Mensal do Rebanho</strong>
+
+                            <small>
+                                Fechamento mensal
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <span
+                        id="mensalStatus"
+                        class="workbook-status offline"
+                    >
+                        Não conectado
+                    </span>
+
+                </div>
+
+                <label for="mensalUrl">
+                    URL da planilha
+                </label>
+
+                <div class="workbook-url-row">
+
+                    <input
+                        type="url"
+                        id="mensalUrl"
+                        class="workbook-url-input"
+                        placeholder="Cole a URL do Mapa Mensal"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn-primary connect-workbook-btn"
+                        data-id="mensal"
+                    >
+                        Conectar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-danger remove-workbook-btn"
+                        data-id="mensal"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+                <small
+                    id="mensalLastSync"
+                    class="workbook-last-sync"
                 >
-                    Remover vínculo
-                </button>
+                    Nunca sincronizada
+                </small>
+
+            </div>
+
+
+            <!-- Divergências -->
+
+            <div
+                class="workbook-card"
+                data-workbook="divergencias"
+            >
+
+                <div class="workbook-card-header">
+
+                    <div class="workbook-title">
+
+                        <span class="workbook-icon">⚖️</span>
+
+                        <div>
+
+                            <strong>
+                                Divergências Diário × Sistema
+                            </strong>
+
+                            <small>
+                                Comparação dos dados
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <span
+                        id="divergenciasStatus"
+                        class="workbook-status offline"
+                    >
+                        Não conectado
+                    </span>
+
+                </div>
+
+                <label for="divergenciasUrl">
+                    URL da planilha
+                </label>
+
+                <div class="workbook-url-row">
+
+                    <input
+                        type="url"
+                        id="divergenciasUrl"
+                        class="workbook-url-input"
+                        placeholder="Cole a URL de Divergências"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn-primary connect-workbook-btn"
+                        data-id="divergencias"
+                    >
+                        Conectar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-danger remove-workbook-btn"
+                        data-id="divergencias"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+                <small
+                    id="divergenciasLastSync"
+                    class="workbook-last-sync"
+                >
+                    Nunca sincronizada
+                </small>
 
             </div>
 
         </div>
 
+
+        <div class="modal-actions">
+
+            <button
+                id="syncAllWorkbooksBtn"
+                class="btn-primary"
+                type="button"
+            >
+                🔄 Sincronizar todas
+            </button>
+
+            <button
+                id="closeWorkbookModalBottom"
+                class="btn-secondary"
+                type="button"
+            >
+                Fechar
+            </button>
+
+            <button
+                id="disconnectWorkbook"
+                type="button"
+                style="display: none;"
+            >
+                Remover vínculo
+            </button>
+
+        </div>
+
     </div>
 
+</div>
 
     <!-- =====================================================
          CONFIRMAÇÃO DE LIMPEZA
