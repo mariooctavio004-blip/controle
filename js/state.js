@@ -106,3 +106,10 @@ const importedData = {
     divergencias: null
 
 };
+
+function normalizeStatus(v){
+  if(v === true) return 'ok';
+  if(v === false) return 'no';
+  if(v === 'ok' || v === 'no' || v === 'blank') return v;
+  return 'ok';
+}
