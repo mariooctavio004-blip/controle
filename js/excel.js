@@ -78,7 +78,7 @@ function sheetToMatrix(sheet) {
 
     return XLSX.utils.sheet_to_json(sheet, {
         header: 1,
-        raw: false,
+        raw: true,
         defval: "",
         dateNF: "dd/mm/yyyy"
     });
@@ -350,51 +350,44 @@ function shouldIgnoreFarmRow(farm) {
    DATAS IMPORTADAS
 ============================================================ */
 
-function normalizeImportedDay(value){
-
-    if(value === undefined || value === null || value === ""){
+function normalizeImportedDay(value) {
+    if (value === undefined || value === null || value === "") {
         return "";
     }
 
-    // DATA DO EXCEL (Date)
-    if(value instanceof Date){
-
-        const dia = String(value.getDate()).padStart(2,"0");
-        const mes = String(value.getMonth()+1).padStart(2,"0");
-
-        return `${dia}/${mes}`;
-
+    /* Data real produzida pelo SheetJS com cellDates:true. */
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const day = String(value.getDate()).padStart(2, "0");
+        const month = String(value.getMonth() + 1).padStart(2, "0");
+        return `${day}/${month}`;
     }
 
-    // Número serial do Excel
-    if(typeof value === "number"){
-
-        const d = XLSX.SSF.parse_date_code(value);
-
-        if(d){
-
-            const dia = String(d.d).padStart(2,"0");
-            const mes = String(d.m).padStart(2,"0");
-
-            return `${dia}/${mes}`;
-
+    /* Número serial do Excel, caso a célula não tenha vindo como Date. */
+    if (typeof value === "number" && Number.isFinite(value)) {
+        const parsed = XLSX?.SSF?.parse_date_code?.(value);
+        if (parsed && parsed.d && parsed.m) {
+            return `${String(parsed.d).padStart(2, "0")}/${String(parsed.m).padStart(2, "0")}`;
         }
-
     }
 
-    const texto = String(value).trim();
+    const text = String(value).trim();
+    if (!text) return "";
 
-    const m = texto.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
-
-    if(m){
-
-        return `${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}`;
-
+    /* ISO: 2026-07-14 ou 2026-07-14T00:00:00. */
+    let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
+    if (match) {
+        return `${String(match[3]).padStart(2, "0")}/${String(match[2]).padStart(2, "0")}`;
     }
 
-    return texto;
+    /* Formatos brasileiros: DD/MM, DD/MM/AAAA, DD-MM-AAAA. */
+    match = text.match(/^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?(?:\s+.*)?$/);
+    if (match) {
+        return `${String(match[1]).padStart(2, "0")}/${String(match[2]).padStart(2, "0")}`;
+    }
 
+    return text;
 }
+
 function uniqueDays(days) {
     const result = [];
 
@@ -518,6 +511,9 @@ function parseStatusSheet(matrix) {
         const normalizedHeader = normalizeName(value);
         if (
             normalizedHeader.includes("PENDENCIA") ||
+            normalizedHeader.includes("PENDENTE") ||
+            normalizedHeader.includes("DIAS RECEBIDOS") ||
+            normalizedHeader.includes("RECEBIDOS") ||
             normalizedHeader.includes("TOTAL") ||
             normalizedHeader.includes("STATUS")
         ) {
