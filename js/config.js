@@ -47,3 +47,13 @@ const PANEL_LABELS = {
     divergencias: "Divergências entre Diário e Sistema"
 };
 const STATUS_CYCLE = { ok:'no', no:'blank', blank:'ok' };
+
+function panelIconHTML(key) {
+
+    const icon = PANEL_ICONS[key];
+
+    return icon
+        ? `<span class="rep-card-icon">${icon}</span>`
+        : "";
+
+}
