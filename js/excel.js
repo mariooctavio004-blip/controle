@@ -828,33 +828,364 @@ function mergeParsedDailySheets(key) {
    PARSER DO MAPA MENSAL
 ============================================================ */
 
-function parseMonthlySheet(matrix) {
-    if (!isMatrix(matrix) || !matrix.length) {
+function parseExcelDateValue(value) {
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
         return null;
     }
 
+    if (
+        value instanceof Date &&
+        !Number.isNaN(value.getTime())
+    ) {
+        return new Date(
+            value.getFullYear(),
+            value.getMonth(),
+            value.getDate()
+        );
+    }
+
+    if (
+        typeof value === "number" &&
+        Number.isFinite(value)
+    ) {
+        const parsed =
+            XLSX?.SSF?.parse_date_code?.(value);
+
+        if (
+            parsed &&
+            parsed.y &&
+            parsed.m &&
+            parsed.d
+        ) {
+            return new Date(
+                parsed.y,
+                parsed.m - 1,
+                parsed.d
+            );
+        }
+    }
+
+    const text =
+        String(value).trim();
+
+    if (!text) return null;
+
+    let match = text.match(
+        /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/
+    );
+
+    if (match) {
+        return new Date(
+            Number(match[1]),
+            Number(match[2]) - 1,
+            Number(match[3])
+        );
+    }
+
+    match = text.match(
+        /^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?$/
+    );
+
+    if (match) {
+        let year = match[3]
+            ? Number(match[3])
+            : new Date().getFullYear();
+
+        if (year < 100) {
+            year += 2000;
+        }
+
+        return new Date(
+            year,
+            Number(match[2]) - 1,
+            Number(match[1])
+        );
+    }
+
+    return null;
+}
+
+function getMonthlyReferenceDate() {
+    const filterEnd =
+        isoToDate(state?.filterEnd);
+
+    if (filterEnd) {
+        return filterEnd;
+    }
+
+    const filterStart =
+        isoToDate(state?.filterStart);
+
+    if (filterStart) {
+        return filterStart;
+    }
+
+    const periodText =
+        String(state?.period || "");
+
+    const matches = [
+        ...periodText.matchAll(
+            /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/g
+        )
+    ];
+
+    if (matches.length) {
+        const last =
+            matches[matches.length - 1];
+
+        let year = last[3]
+            ? Number(last[3])
+            : new Date().getFullYear();
+
+        if (year < 100) {
+            year += 2000;
+        }
+
+        return new Date(
+            year,
+            Number(last[2]) - 1,
+            Number(last[1])
+        );
+    }
+
+    return new Date();
+}
+
+function formatMonthlyLabel(date) {
+    if (
+        !(date instanceof Date) ||
+        Number.isNaN(date.getTime())
+    ) {
+        return "";
+    }
+
+    const monthName =
+        date
+            .toLocaleDateString(
+                "pt-BR",
+                {
+                    month: "long"
+                }
+            )
+            .toUpperCase();
+
+    return `FECHAMENTO – ${monthName}/${date.getFullYear()}`;
+}
+
+function countMeaningfulMonthlyStatuses(
+    matrix,
+    firstDataRow,
+    farmColumn,
+    statusColumn
+) {
+    let score = 0;
+
+    for (
+        let rowIndex = firstDataRow;
+        rowIndex < matrix.length;
+        rowIndex++
+    ) {
+        const row =
+            matrix[rowIndex] || [];
+
+        const farm =
+            String(
+                row[farmColumn] ?? ""
+            ).trim();
+
+        if (shouldIgnoreFarmRow(farm)) {
+            continue;
+        }
+
+        const normalized =
+            normalizeName(
+                row[statusColumn]
+            );
+
+        if (
+            normalized.includes("RECEB") ||
+            normalized.includes("PEND") ||
+            normalized.includes("ENVIAD") ||
+            normalized.includes("CONCLUID") ||
+            normalized.includes("OK")
+        ) {
+            score++;
+        }
+    }
+
+    return score;
+}
+
+function parseMonthlyPeriodLayout(matrix) {
+    const periodHeader =
+        findHeaderCell(
+            matrix,
+            ["PERIODO"]
+        );
+
+    if (!periodHeader) {
+        return null;
+    }
+
+    const headerRow =
+        periodHeader.rowIndex;
+
+    const farmColumn =
+        periodHeader.columnIndex;
+
+    const header =
+        matrix[headerRow] || [];
+
+    const referenceDate =
+        getMonthlyReferenceDate();
+
+    const targetYear =
+        referenceDate.getFullYear();
+
+    const targetMonth =
+        referenceDate.getMonth();
+
+    const candidateColumns = [];
+
+    for (
+        let columnIndex = farmColumn + 1;
+        columnIndex < header.length;
+        columnIndex++
+    ) {
+        const date =
+            parseExcelDateValue(
+                header[columnIndex]
+            );
+
+        if (!date) continue;
+
+        if (
+            date.getFullYear() !== targetYear ||
+            date.getMonth() !== targetMonth
+        ) {
+            continue;
+        }
+
+        candidateColumns.push({
+            columnIndex,
+            date,
+            score:
+                countMeaningfulMonthlyStatuses(
+                    matrix,
+                    headerRow + 1,
+                    farmColumn,
+                    columnIndex
+                )
+        });
+    }
+
+    if (!candidateColumns.length) {
+        return {
+            rows: [],
+            referenceDate,
+            monthFound: false
+        };
+    }
+
+    /*
+     * Quando existem várias datas do mesmo mês, usa a coluna
+     * que realmente contém mais status preenchidos.
+     */
+    candidateColumns.sort(
+        (first, second) =>
+            second.score - first.score ||
+            first.columnIndex - second.columnIndex
+    );
+
+    const selected =
+        candidateColumns[0];
+
+    const rows = [];
+
+    for (
+        let rowIndex = headerRow + 1;
+        rowIndex < matrix.length;
+        rowIndex++
+    ) {
+        const row =
+            matrix[rowIndex] || [];
+
+        const farm =
+            String(
+                row[farmColumn] ?? ""
+            ).trim();
+
+        if (shouldIgnoreFarmRow(farm)) {
+            continue;
+        }
+
+        rows.push({
+            farm,
+            status:
+                cellToStatus(
+                    row[selected.columnIndex]
+                )
+        });
+    }
+
+    return {
+        rows,
+        referenceDate:
+            selected.date,
+        monthFound: true,
+        selectedColumn:
+            selected.columnIndex
+    };
+}
+
+function parseMonthlySimpleLayout(matrix) {
     let headerRow = -1;
     let farmColumn = -1;
     let statusColumn = -1;
 
-    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
-        const row = matrix[rowIndex] || [];
-        const possibleFarmColumn = findColumnInRow(row, ["FAZENDA"]);
+    for (
+        let rowIndex = 0;
+        rowIndex < matrix.length;
+        rowIndex++
+    ) {
+        const row =
+            matrix[rowIndex] || [];
 
-        if (possibleFarmColumn === -1) continue;
+        const possibleFarmColumn =
+            findColumnInRow(
+                row,
+                ["FAZENDA"]
+            );
+
+        if (
+            possibleFarmColumn === -1
+        ) {
+            continue;
+        }
 
         headerRow = rowIndex;
-        farmColumn = possibleFarmColumn;
-        statusColumn = findColumnInRow(row, [
-            "STATUS",
-            "SITUACAO",
-            "ENVIO",
-            "RECEBIDO",
-            "FECHAMENTO"
-        ]);
+        farmColumn =
+            possibleFarmColumn;
+
+        statusColumn =
+            findColumnInRow(
+                row,
+                [
+                    "STATUS",
+                    "SITUACAO",
+                    "ENVIO",
+                    "RECEBIDO",
+                    "FECHAMENTO"
+                ]
+            );
 
         if (statusColumn === -1) {
-            statusColumn = farmColumn + 1;
+            statusColumn =
+                farmColumn + 1;
         }
 
         break;
@@ -875,33 +1206,123 @@ function parseMonthlySheet(matrix) {
         rowIndex < matrix.length;
         rowIndex++
     ) {
-        const row = matrix[rowIndex] || [];
-        const farm = String(row[farmColumn] ?? "").trim();
+        const row =
+            matrix[rowIndex] || [];
 
-        if (shouldIgnoreFarmRow(farm)) continue;
+        const farm =
+            String(
+                row[farmColumn] ?? ""
+            ).trim();
+
+        if (shouldIgnoreFarmRow(farm)) {
+            continue;
+        }
 
         rows.push({
             farm,
-            status: cellToStatus(row[statusColumn])
+            status:
+                cellToStatus(
+                    row[statusColumn]
+                )
         });
     }
 
-    return rows.length ? rows : null;
+    return rows.length
+        ? {
+            rows,
+            referenceDate:
+                getMonthlyReferenceDate(),
+            monthFound: true
+        }
+        : null;
+}
+
+function parseMonthlySheet(matrix) {
+    if (
+        !isMatrix(matrix) ||
+        !matrix.length
+    ) {
+        return null;
+    }
+
+    const periodLayout =
+        parseMonthlyPeriodLayout(
+            matrix
+        );
+
+    if (
+        periodLayout &&
+        periodLayout.monthFound
+    ) {
+        return periodLayout;
+    }
+
+    const simpleLayout =
+        parseMonthlySimpleLayout(
+            matrix
+        );
+
+    if (simpleLayout) {
+        return simpleLayout;
+    }
+
+    return periodLayout;
 }
 
 function mergeParsedMonthlySheets() {
-    const rows = getImportedMatrices("mensal")
-        .flatMap(matrix => parseMonthlySheet(matrix) || []);
+    const parsedSheets =
+        getImportedMatrices("mensal")
+            .map(matrix =>
+                parseMonthlySheet(matrix)
+            )
+            .filter(Boolean);
 
-    if (!rows.length) return null;
+    if (!parsedSheets.length) {
+        return null;
+    }
 
-    const farms = new Map();
+    const validSheets =
+        parsedSheets.filter(
+            parsed =>
+                parsed.monthFound &&
+                Array.isArray(parsed.rows) &&
+                parsed.rows.length
+        );
 
-    rows.forEach(row => {
-        farms.set(normalizeName(row.farm), row);
+    if (!validSheets.length) {
+        return {
+            rows: [],
+            referenceDate:
+                getMonthlyReferenceDate(),
+            monthFound: false
+        };
+    }
+
+    const farms =
+        new Map();
+
+    validSheets.forEach(parsed => {
+        parsed.rows.forEach(row => {
+            farms.set(
+                normalizeName(row.farm),
+                row
+            );
+        });
     });
 
-    return [...farms.values()];
+    const referenceDate =
+        validSheets.find(
+            parsed =>
+                parsed.referenceDate
+        )?.referenceDate ||
+        getMonthlyReferenceDate();
+
+    return {
+        rows:
+            [...farms.values()],
+        referenceDate,
+        monthFound: true
+    };
 }
 
 
@@ -1103,26 +1524,52 @@ function applyDailySheet(key, parsed, selectedDays, unmatched) {
 }
 
 function applyMonthlySheet(parsed, unmatched) {
-    if (!parsed?.length) return false;
+    if (
+        !parsed ||
+        !parsed.monthFound ||
+        !Array.isArray(parsed.rows) ||
+        !parsed.rows.length
+    ) {
+        return false;
+    }
 
     const newMonthly = {};
 
-    state.farms.forEach((farm, farmIndex) => {
-        newMonthly[farmIndex] = "blank";
-    });
+    state.farms.forEach(
+        (farm, farmIndex) => {
+            newMonthly[farmIndex] =
+                "blank";
+        }
+    );
 
-    parsed.forEach(row => {
-        const farmIndex = matchFarmIndex(row.farm);
+    parsed.rows.forEach(row => {
+        const farmIndex =
+            matchFarmIndex(row.farm);
 
         if (farmIndex === -1) {
             unmatched.add(row.farm);
             return;
         }
 
-        newMonthly[farmIndex] = normalizeStatus(row.status);
+        newMonthly[farmIndex] =
+            normalizeStatus(
+                row.status
+            );
     });
 
-    state.monthly = newMonthly;
+    /*
+     * Atualiza somente o painel mensal.
+     * Nunca altera state.days nem os dados diários.
+     */
+    state.monthly =
+        newMonthly;
+
+    if (parsed.referenceDate) {
+        state.monthLabel =
+            formatMonthlyLabel(
+                parsed.referenceDate
+            );
+    }
 
     return true;
 }
@@ -1305,6 +1752,13 @@ function buildImportMessage(result, extraErrors = [], ignoredSheets = []) {
     if (result.noDatesInFilter) {
         message +=
             " As abas diárias não possuem datas dentro do período selecionado.";
+    }
+
+    if (
+        result.failed.includes("mensal")
+    ) {
+        message +=
+            " O Mapa Mensal não possui dados do mesmo mês e ano do período selecionado.";
     }
 
     if (result.failed.length) {
