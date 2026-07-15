@@ -214,70 +214,48 @@ function ensureDayActionButtons() {
         );
     }
 
+    let addDayButton =
+        document.getElementById("addDayBtn");
+
+    if (!addDayButton) {
+        addDayButton =
+            document.createElement("button");
+
+        addDayButton.id = "addDayBtn";
+        addDayButton.type = "button";
+        addDayButton.className = "add-chip";
+        addDayButton.textContent =
+            "+ Adicionar dia";
+    }
+
+    let manualButton =
+        document.getElementById(
+            "enableManualEntryBtn"
+        );
+
+    if (!manualButton) {
+        manualButton =
+            document.createElement("button");
+
+        manualButton.id =
+            "enableManualEntryBtn";
+
+        manualButton.type = "button";
+        manualButton.className =
+            "add-chip manual-entry-btn";
+    }
+
     /*
-     * Remove controles antigos, inclusive:
-     * - quadrado branco vazio;
-     * - botão visual sem função;
-     * - cópias duplicadas.
+     * Move os botões reais para a área correta.
+     * Não apaga nem recria os botões em cada renderização.
      */
-    [...card.querySelectorAll(
-        "#addDayBtn, #enableManualEntryBtn, " +
-        "button, label, a"
-    )].forEach(element => {
-        if (element.closest("#dayList")) {
-            return;
-        }
+    if (addDayButton.parentElement !== actions) {
+        actions.appendChild(addDayButton);
+    }
 
-        const textValue =
-            normalizeControlText(
-                element.textContent
-            );
-
-        const isDayControl =
-            element.id === "addDayBtn" ||
-            element.id === "enableManualEntryBtn" ||
-            textValue.includes("ADICIONAR DIA") ||
-            textValue.includes("PREENCHER MANUALMENTE") ||
-            textValue.includes("OCULTAR PREENCHIMENTO MANUAL");
-
-        const isEmptyControl =
-            !textValue &&
-            (
-                element.matches("button") ||
-                element.matches("label") ||
-                element.matches("a")
-            );
-
-        if (
-            (isDayControl || isEmptyControl) &&
-            !element.closest(".chip")
-        ) {
-            element.remove();
-        }
-    });
-
-    const addDayButton =
-        document.createElement("button");
-
-    addDayButton.id = "addDayBtn";
-    addDayButton.type = "button";
-    addDayButton.className = "add-chip";
-    addDayButton.textContent = "+ Adicionar dia";
-
-    const manualButton =
-        document.createElement("button");
-
-    manualButton.id =
-        "enableManualEntryBtn";
-
-    manualButton.type = "button";
-    manualButton.className =
-        "add-chip manual-entry-btn";
-
-    actions.replaceChildren(
-        addDayButton,
-        manualButton
-    );
+    if (manualButton.parentElement !== actions) {
+        actions.appendChild(manualButton);
+    }
 
     updateManualEntryButton(
         manualButton
@@ -363,6 +341,7 @@ function bindFarmAndDayButtons() {
     ) {
         addFarmButton.type = "button";
         addFarmButton.dataset.boundAddFarm = "true";
+
         addFarmButton.addEventListener(
             "click",
             addFarm
@@ -374,14 +353,26 @@ function bindFarmAndDayButtons() {
         manualButton
     } = ensureDayActionButtons();
 
-    if (addDayButton) {
+    if (
+        addDayButton &&
+        addDayButton.dataset.boundAddDay !== "true"
+    ) {
+        addDayButton.type = "button";
+        addDayButton.dataset.boundAddDay = "true";
+
         addDayButton.addEventListener(
             "click",
             addDay
         );
     }
 
-    if (manualButton) {
+    if (
+        manualButton &&
+        manualButton.dataset.boundManualEntry !== "true"
+    ) {
+        manualButton.type = "button";
+        manualButton.dataset.boundManualEntry = "true";
+
         manualButton.addEventListener(
             "click",
             toggleManualEntry
