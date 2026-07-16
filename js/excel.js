@@ -1330,6 +1330,175 @@ function mergeParsedMonthlySheets() {
    PARSER DE DIVERGÊNCIAS
 ============================================================ */
 
+function getDivergenceFilterMonthKeys() {
+    const keys = new Set();
+
+    let startDate =
+        isoToDate(state?.filterStart);
+
+    let endDate =
+        isoToDate(state?.filterEnd);
+
+    if (!startDate && !endDate) {
+        return keys;
+    }
+
+    if (!startDate) {
+        startDate =
+            new Date(endDate);
+    }
+
+    if (!endDate) {
+        endDate =
+            new Date(startDate);
+    }
+
+    if (startDate > endDate) {
+        [startDate, endDate] =
+            [endDate, startDate];
+    }
+
+    /*
+     * Cria uma chave para cada mês atravessado pelo filtro.
+     * Exemplo: 28/06 a 04/07 aceita JUNHO e JULHO.
+     */
+    const cursor =
+        new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            1
+        );
+
+    const lastMonth =
+        new Date(
+            endDate.getFullYear(),
+            endDate.getMonth(),
+            1
+        );
+
+    while (cursor <= lastMonth) {
+        keys.add(
+            `${cursor.getFullYear()}-${String(
+                cursor.getMonth() + 1
+            ).padStart(2, "0")}`
+        );
+
+        cursor.setMonth(
+            cursor.getMonth() + 1
+        );
+    }
+
+    return keys;
+}
+
+function parseDivergenceDate(value) {
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return null;
+    }
+
+    if (
+        value instanceof Date &&
+        !Number.isNaN(value.getTime())
+    ) {
+        return new Date(
+            value.getFullYear(),
+            value.getMonth(),
+            value.getDate()
+        );
+    }
+
+    /*
+     * Datas do Excel chegam como número serial.
+     * Aceita somente a faixa plausível de datas modernas para não
+     * confundir quantidades como 27, 59, 230 e 239 com datas.
+     */
+    if (
+        typeof value === "number" &&
+        Number.isFinite(value) &&
+        value >= 20000 &&
+        value <= 80000
+    ) {
+        const parsed =
+            XLSX?.SSF?.parse_date_code?.(value);
+
+        if (
+            parsed &&
+            parsed.y &&
+            parsed.m &&
+            parsed.d
+        ) {
+            return new Date(
+                parsed.y,
+                parsed.m - 1,
+                parsed.d
+            );
+        }
+    }
+
+    const text =
+        String(value).trim();
+
+    if (!text) return null;
+
+    let match =
+        text.match(
+            /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/
+        );
+
+    if (match) {
+        return new Date(
+            Number(match[1]),
+            Number(match[2]) - 1,
+            Number(match[3])
+        );
+    }
+
+    match =
+        text.match(
+            /^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/
+        );
+
+    if (match) {
+        let year =
+            match[3]
+                ? Number(match[3])
+                : (
+                    isoToDate(state?.filterEnd) ||
+                    isoToDate(state?.filterStart) ||
+                    new Date()
+                ).getFullYear();
+
+        if (year < 100) {
+            year += 2000;
+        }
+
+        return new Date(
+            year,
+            Number(match[2]) - 1,
+            Number(match[1])
+        );
+    }
+
+    return null;
+}
+
+function getDivergenceMonthKey(date) {
+    if (
+        !(date instanceof Date) ||
+        Number.isNaN(date.getTime())
+    ) {
+        return "";
+    }
+
+    return `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+    ).padStart(2, "0")}`;
+}
+
 function parseDivergSheet(matrix) {
     if (!isMatrix(matrix) || !matrix.length) {
         return null;
@@ -1338,48 +1507,125 @@ function parseDivergSheet(matrix) {
     let headerRow = -1;
     let farmColumn = -1;
 
-    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
-        const row = matrix[rowIndex] || [];
-        const possibleFarmColumn = findColumnInRow(row, ["FAZENDA"]);
+    for (
+        let rowIndex = 0;
+        rowIndex < matrix.length;
+        rowIndex++
+    ) {
+        const row =
+            matrix[rowIndex] || [];
+
+        const possibleFarmColumn =
+            findColumnInRow(
+                row,
+                ["FAZENDA"]
+            );
 
         if (possibleFarmColumn !== -1) {
             headerRow = rowIndex;
-            farmColumn = possibleFarmColumn;
+            farmColumn =
+                possibleFarmColumn;
             break;
         }
     }
 
-    if (headerRow === -1 || farmColumn === -1) {
+    if (
+        headerRow === -1 ||
+        farmColumn === -1
+    ) {
         return null;
     }
 
-    const header = matrix[headerRow] || [];
+    const header =
+        matrix[headerRow] || [];
 
-    let nascDiarioColumn = findColumnInRow(header, [
-        "NASC DIARIO",
-        "NASCIMENTO DIARIO"
-    ]);
+    /*
+     * Na sua aba Divergências:
+     * B = Data
+     * C = Fazenda
+     *
+     * Mesmo que a posição mude, o código procura pelo título DATA.
+     */
+    let dateColumn =
+        findColumnInRow(
+            header,
+            [
+                "DATA",
+                "MES",
+                "MÊS",
+                "REFERENCIA",
+                "REFERÊNCIA"
+            ]
+        );
 
-    let nascSistemaColumn = findColumnInRow(header, [
-        "NASC SISTEMA",
-        "NASCIMENTO SISTEMA"
-    ]);
+    let nascDiarioColumn =
+        findColumnInRow(
+            header,
+            [
+                "NASCIMENTOS DIARIO",
+                "NASCIMENTO DIARIO",
+                "NASC DIARIO"
+            ]
+        );
 
-    let mortesDiarioColumn = findColumnInRow(header, [
-        "MORTES DIARIO",
-        "MORTE DIARIO"
-    ]);
+    let nascSistemaColumn =
+        findColumnInRow(
+            header,
+            [
+                "NASCIMENTOS SISTEMA",
+                "NASCIMENTO SISTEMA",
+                "NASC SISTEMA"
+            ]
+        );
 
-    let mortesSistemaColumn = findColumnInRow(header, [
-        "MORTES SISTEMA",
-        "MORTE SISTEMA"
-    ]);
+    let mortesDiarioColumn =
+        findColumnInRow(
+            header,
+            [
+                "MORTES DIARIO",
+                "MORTE DIARIO"
+            ]
+        );
 
-    /* Compatibilidade com a estrutura antiga por posição. */
-    if (nascDiarioColumn === -1) nascDiarioColumn = farmColumn + 1;
-    if (nascSistemaColumn === -1) nascSistemaColumn = farmColumn + 2;
-    if (mortesDiarioColumn === -1) mortesDiarioColumn = farmColumn + 4;
-    if (mortesSistemaColumn === -1) mortesSistemaColumn = farmColumn + 5;
+    let mortesSistemaColumn =
+        findColumnInRow(
+            header,
+            [
+                "MORTES SISTEMA",
+                "MORTE SISTEMA"
+            ]
+        );
+
+    if (dateColumn === -1) {
+        dateColumn =
+            farmColumn - 1;
+    }
+
+    if (nascDiarioColumn === -1) {
+        nascDiarioColumn =
+            farmColumn + 1;
+    }
+
+    if (nascSistemaColumn === -1) {
+        nascSistemaColumn =
+            farmColumn + 2;
+    }
+
+    if (mortesDiarioColumn === -1) {
+        mortesDiarioColumn =
+            farmColumn + 4;
+    }
+
+    if (mortesSistemaColumn === -1) {
+        mortesSistemaColumn =
+            farmColumn + 5;
+    }
+
+    const acceptedMonthKeys =
+        getDivergenceFilterMonthKeys();
+
+    const filterIsActive =
+        acceptedMonthKeys.size > 0;
 
     const rows = [];
 
@@ -1388,33 +1634,90 @@ function parseDivergSheet(matrix) {
         rowIndex < matrix.length;
         rowIndex++
     ) {
-        const row = matrix[rowIndex] || [];
-        const farm = String(row[farmColumn] ?? "").trim();
+        const row =
+            matrix[rowIndex] || [];
 
-        if (shouldIgnoreFarmRow(farm)) continue;
+        const farm =
+            String(
+                row[farmColumn] ?? ""
+            ).trim();
+
+        if (shouldIgnoreFarmRow(farm)) {
+            continue;
+        }
+
+        const referenceDate =
+            parseDivergenceDate(
+                row[dateColumn]
+            );
+
+        const monthKey =
+            getDivergenceMonthKey(
+                referenceDate
+            );
+
+        /*
+         * Quando há filtro, somente linhas cuja coluna DATA pertence
+         * ao mês/ano selecionado são consideradas.
+         */
+        if (
+            filterIsActive &&
+            (
+                !monthKey ||
+                !acceptedMonthKeys.has(monthKey)
+            )
+        ) {
+            continue;
+        }
 
         rows.push({
             farm,
-            nd: toNumberOrEmpty(row[nascDiarioColumn]),
-            ns: toNumberOrEmpty(row[nascSistemaColumn]),
-            md: toNumberOrEmpty(row[mortesDiarioColumn]),
-            ms: toNumberOrEmpty(row[mortesSistemaColumn])
+            referenceDate,
+            nd:
+                toNumberOrEmpty(
+                    row[nascDiarioColumn]
+                ),
+            ns:
+                toNumberOrEmpty(
+                    row[nascSistemaColumn]
+                ),
+            md:
+                toNumberOrEmpty(
+                    row[mortesDiarioColumn]
+                ),
+            ms:
+                toNumberOrEmpty(
+                    row[mortesSistemaColumn]
+                )
         });
     }
 
-    return rows.length ? rows : null;
+    return rows.length
+        ? rows
+        : null;
 }
 
 function mergeParsedDivergenceSheets() {
-    const rows = getImportedMatrices("divergencias")
-        .flatMap(matrix => parseDivergSheet(matrix) || []);
+    const rows =
+        getImportedMatrices(
+            "divergencias"
+        )
+            .flatMap(matrix =>
+                parseDivergSheet(matrix) || []
+            );
 
-    if (!rows.length) return null;
+    if (!rows.length) {
+        return null;
+    }
 
-    const farms = new Map();
+    const farms =
+        new Map();
 
     rows.forEach(row => {
-        farms.set(normalizeName(row.farm), row);
+        farms.set(
+            normalizeName(row.farm),
+            row
+        );
     });
 
     return [...farms.values()];
@@ -1575,6 +1878,20 @@ function applyMonthlySheet(parsed, unmatched) {
 }
 
 function applyDivergSheet(parsed, unmatched) {
+    /*
+     * Sempre limpa primeiro para não manter valores do mês anterior.
+     */
+    state.diverg = {};
+
+    state.farms.forEach((farm, farmIndex) => {
+        state.diverg[farmIndex] = {
+            nd: "",
+            ns: "",
+            md: "",
+            ms: ""
+        };
+    });
+
     if (!parsed?.length) return false;
 
     parsed.forEach(row => {
