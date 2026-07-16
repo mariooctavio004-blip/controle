@@ -29,157 +29,6 @@ const EXCEL_PANEL_LABELS = {
 };
 
 
-/* ============================================================
-   CACHE LOCAL DOS ARQUIVOS EXCEL
-   Guarda os bytes dos arquivos no IndexedDB. Assim, trocar o
-   filtro ou clicar em Atualizar não exige selecionar os arquivos
-   novamente. Os bytes não são enviados ao Supabase.
-============================================================ */
-
-const EXCEL_CACHE_DB_NAME = "controle-planilhas-cache";
-const EXCEL_CACHE_DB_VERSION = 1;
-const EXCEL_CACHE_STORE = "workbooks";
-
-let excelCacheDatabasePromise = null;
-let importedDataRefreshPromise = null;
-
-function openExcelCacheDatabase() {
-    if (excelCacheDatabasePromise) {
-        return excelCacheDatabasePromise;
-    }
-
-    excelCacheDatabasePromise = new Promise((resolve, reject) => {
-        if (!("indexedDB" in window)) {
-            reject(new Error("Este navegador não oferece IndexedDB."));
-            return;
-        }
-
-        const request = indexedDB.open(
-            EXCEL_CACHE_DB_NAME,
-            EXCEL_CACHE_DB_VERSION
-        );
-
-        request.onupgradeneeded = () => {
-            const database = request.result;
-
-            if (!database.objectStoreNames.contains(EXCEL_CACHE_STORE)) {
-                database.createObjectStore(EXCEL_CACHE_STORE, {
-                    keyPath: "cacheKey"
-                });
-            }
-        };
-
-        request.onsuccess = () => {
-            resolve(request.result);
-        };
-
-        request.onerror = () => {
-            reject(
-                request.error ||
-                new Error("Não foi possível abrir o cache das planilhas.")
-            );
-        };
-    });
-
-    return excelCacheDatabasePromise;
-}
-
-async function saveLocalWorkbookToCache({
-    cacheKey,
-    fileName,
-    buffer,
-    lastModified = 0
-}) {
-    const database = await openExcelCacheDatabase();
-
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(
-            EXCEL_CACHE_STORE,
-            "readwrite"
-        );
-
-        transaction.objectStore(EXCEL_CACHE_STORE).put({
-            cacheKey,
-            fileName,
-            lastModified,
-            buffer,
-            savedAt: new Date().toISOString()
-        });
-
-        transaction.oncomplete = () => resolve(true);
-        transaction.onerror = () => reject(
-            transaction.error ||
-            new Error("Não foi possível guardar a planilha no navegador.")
-        );
-        transaction.onabort = transaction.onerror;
-    });
-}
-
-async function getLocalWorkbookFromCache(cacheKey) {
-    if (!cacheKey) return null;
-
-    const database = await openExcelCacheDatabase();
-
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(
-            EXCEL_CACHE_STORE,
-            "readonly"
-        );
-
-        const request = transaction
-            .objectStore(EXCEL_CACHE_STORE)
-            .get(cacheKey);
-
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(
-            request.error ||
-            new Error("Não foi possível ler a planilha guardada.")
-        );
-    });
-}
-
-async function deleteLocalWorkbookFromCache(cacheKey) {
-    if (!cacheKey) return false;
-
-    try {
-        const database = await openExcelCacheDatabase();
-
-        await new Promise((resolve, reject) => {
-            const transaction = database.transaction(
-                EXCEL_CACHE_STORE,
-                "readwrite"
-            );
-
-            transaction
-                .objectStore(EXCEL_CACHE_STORE)
-                .delete(cacheKey);
-
-            transaction.oncomplete = resolve;
-            transaction.onerror = () => reject(transaction.error);
-            transaction.onabort = transaction.onerror;
-        });
-
-        return true;
-    } catch (error) {
-        console.warn("Não foi possível excluir o cache da planilha:", error);
-        return false;
-    }
-}
-
-function createWorkbookCacheKey(file) {
-    const name = String(file?.name || "planilha.xlsx");
-    const size = Number(file?.size || 0);
-    const modified = Number(file?.lastModified || 0);
-
-    return [
-        "excel",
-        normalizeName(name) || "ARQUIVO",
-        size,
-        modified
-    ].join("-");
-}
-
-
 
 
 /* ============================================================
@@ -196,7 +45,7 @@ function ensureImportedFilesState() {
     return state.importedFiles;
 }
 
-function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = [], cacheInfo = {}) {
+function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = []) {
     const files = ensureImportedFilesState();
     const normalizedFileName = String(fileName || "Planilha sem nome").trim();
 
@@ -229,28 +78,6 @@ function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = [], ca
         sheets: uniqueSheets,
         panels: uniquePanels,
         ignoredSheets: [...new Set(ignoredSheets || [])],
-        cacheKey:
-            cacheInfo.cacheKey ||
-            files[existingIndex]?.cacheKey ||
-            "",
-        fileSize:
-            Number(cacheInfo.fileSize || files[existingIndex]?.fileSize || 0),
-        lastModified:
-            Number(cacheInfo.lastModified || files[existingIndex]?.lastModified || 0),
-        importFilterStart:
-            String(
-                cacheInfo.importFilterStart ??
-                files[existingIndex]?.importFilterStart ??
-                state?.filterStart ??
-                ""
-            ),
-        importFilterEnd:
-            String(
-                cacheInfo.importFilterEnd ??
-                files[existingIndex]?.importFilterEnd ??
-                state?.filterEnd ??
-                ""
-            ),
         importedAt: new Date().toISOString(),
         lastSync: new Date().toLocaleTimeString("pt-BR", {
             hour: "2-digit",
@@ -337,7 +164,7 @@ function renderImportedWorkbookStatus() {
     list.innerHTML = localHTML + urlHTML;
 }
 
-async function disconnectImportedLocalFile(fileId) {
+function disconnectImportedLocalFile(fileId) {
     const files = ensureImportedFilesState();
     const index = files.findIndex(file => file?.id === fileId);
 
@@ -351,8 +178,6 @@ async function disconnectImportedLocalFile(fileId) {
     if (!confirmed) return;
 
     files.splice(index, 1);
-
-    await deleteLocalWorkbookFromCache(file.cacheKey);
 
     if (typeof saveState === "function") {
         saveState();
@@ -378,9 +203,7 @@ function bindImportedWorkbookStatusEvents() {
 
         event.preventDefault();
         event.stopPropagation();
-        void disconnectImportedLocalFile(
-            button.dataset.localFileId
-        );
+        disconnectImportedLocalFile(button.dataset.localFileId);
     });
 }
 
@@ -538,92 +361,55 @@ function isMatrix(value) {
     );
 }
 
-function addImportedSheet(
-    key,
-    matrix,
-    sheetName = "",
-    sourceContext = {}
-) {
+function addImportedSheet(key, matrix, sheetName = "") {
     if (!EXCEL_PANEL_KEYS.includes(key)) return;
     if (!isMatrix(matrix) || !matrix.length) return;
 
     const current = importedData[key];
 
+    /*
+     * Formato novo: lista de abas.
+     * Cada item guarda nome e matriz.
+     */
     if (!Array.isArray(current) || !current.length) {
         importedData[key] = [];
     } else if (isMatrix(current)) {
+        /*
+         * Compatibilidade: o SharePoint pode ter colocado uma matriz
+         * diretamente em importedData[key].
+         */
         importedData[key] = [
             {
                 sheetName: EXCEL_PANEL_LABELS[key],
-                matrix: current,
-                sourceType: "url",
-                filterStart: "",
-                filterEnd: ""
+                matrix: current
             }
         ];
     }
 
     importedData[key].push({
         sheetName,
-        matrix,
-        sourceType:
-            String(sourceContext.sourceType || "local"),
-        fileName:
-            String(sourceContext.fileName || ""),
-        filterStart:
-            String(sourceContext.filterStart || ""),
-        filterEnd:
-            String(sourceContext.filterEnd || "")
+        matrix
     });
 }
 
-function getImportedSheetEntries(key) {
+function getImportedMatrices(key) {
     const value = importedData[key];
 
     if (!value) return [];
 
+    /* Uma matriz direta, usada pelo SharePoint. */
     if (isMatrix(value)) {
-        return value.length
-            ? [{
-                sheetName: EXCEL_PANEL_LABELS[key],
-                matrix: value,
-                sourceType: "url",
-                fileName: "",
-                filterStart: "",
-                filterEnd: ""
-            }]
-            : [];
+        return value.length ? [value] : [];
     }
 
+    /* Lista de abas criada pela importação local. */
     if (Array.isArray(value)) {
         return value
-            .filter(item =>
-                item &&
-                isMatrix(item.matrix) &&
-                item.matrix.length
-            )
-            .map(item => ({
-                sheetName:
-                    String(item.sheetName || ""),
-                matrix:
-                    item.matrix,
-                sourceType:
-                    String(item.sourceType || "local"),
-                fileName:
-                    String(item.fileName || ""),
-                filterStart:
-                    String(item.filterStart || ""),
-                filterEnd:
-                    String(item.filterEnd || "")
-            }));
+            .map(item => item?.matrix)
+            .filter(matrix => isMatrix(matrix) && matrix.length);
     }
 
     return [];
-}
-
-function getImportedMatrices(key) {
-    return getImportedSheetEntries(key)
-        .map(item => item.matrix);
 }
 
 function hasImportedData(key) {
@@ -641,11 +427,7 @@ function clearImportedData() {
    LEITURA DE TODAS AS ABAS DE UM WORKBOOK
 ============================================================ */
 
-function processWorkbook(
-    workbook,
-    fallbackName = "",
-    sourceContext = {}
-) {
+function processWorkbook(workbook, fallbackName = "") {
     if (
         !workbook ||
         !Array.isArray(workbook.SheetNames) ||
@@ -704,17 +486,7 @@ function processWorkbook(
             return;
         }
 
-        addImportedSheet(
-            key,
-            matrix,
-            sheetName,
-            {
-                ...sourceContext,
-                fileName:
-                    sourceContext.fileName ||
-                    fallbackName
-            }
-        );
+        addImportedSheet(key, matrix, sheetName);
 
         if (!recognized.includes(key)) {
             recognized.push(key);
@@ -1478,13 +1250,10 @@ function parseMonthlySheet(matrix) {
             matrix
         );
 
-    /*
-     * Se existe uma linha PERÍODO, a planilha é mensal por colunas.
-     * Nesse caso, a ausência do mês selecionado deve resultar em
-     * painel em branco — nunca cair no layout simples e usar outra
-     * coluna por engano.
-     */
-    if (periodLayout) {
+    if (
+        periodLayout &&
+        periodLayout.monthFound
+    ) {
         return periodLayout;
     }
 
@@ -1561,497 +1330,6 @@ function mergeParsedMonthlySheets() {
    PARSER DE DIVERGÊNCIAS
 ============================================================ */
 
-function normalizeFilterDate(value) {
-    const date =
-        isoToDate(String(value || ""));
-
-    if (!date) return null;
-
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-}
-
-function rangesOverlap(
-    firstStart,
-    firstEnd,
-    secondStart,
-    secondEnd
-) {
-    const aStart =
-        normalizeFilterDate(firstStart);
-
-    const aEnd =
-        normalizeFilterDate(firstEnd) ||
-        aStart;
-
-    const bStart =
-        normalizeFilterDate(secondStart);
-
-    const bEnd =
-        normalizeFilterDate(secondEnd) ||
-        bStart;
-
-    if (
-        !aStart ||
-        !aEnd ||
-        !bStart ||
-        !bEnd
-    ) {
-        return false;
-    }
-
-    return (
-        aStart <= bEnd &&
-        bStart <= aEnd
-    );
-}
-
-function getDivergenceFallbackYear(entry = {}) {
-    const candidates = [
-        state?.filterEnd,
-        state?.filterStart,
-        entry.filterEnd,
-        entry.filterStart
-    ];
-
-    for (const value of candidates) {
-        const date =
-            normalizeFilterDate(value);
-
-        if (date) {
-            return date.getFullYear();
-        }
-    }
-
-    return new Date().getFullYear();
-}
-
-function createDivergenceDate(
-    day,
-    month,
-    year,
-    fallbackYear
-) {
-    let resolvedYear =
-        year === undefined ||
-        year === null ||
-        year === ""
-            ? fallbackYear
-            : Number(year);
-
-    if (resolvedYear < 100) {
-        resolvedYear += 2000;
-    }
-
-    const resolvedDay =
-        Number(day);
-
-    const resolvedMonth =
-        Number(month);
-
-    const date =
-        new Date(
-            resolvedYear,
-            resolvedMonth - 1,
-            resolvedDay
-        );
-
-    if (
-        Number.isNaN(date.getTime()) ||
-        date.getFullYear() !== resolvedYear ||
-        date.getMonth() !== resolvedMonth - 1 ||
-        date.getDate() !== resolvedDay
-    ) {
-        return null;
-    }
-
-    return date;
-}
-
-function normalizeDetectedDivergenceDate(date) {
-    if (
-        !(date instanceof Date) ||
-        Number.isNaN(date.getTime())
-    ) {
-        return null;
-    }
-
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-}
-
-function parseDivergenceExcelSerial(value) {
-    if (
-        typeof value !== "number" ||
-        !Number.isFinite(value)
-    ) {
-        return null;
-    }
-
-    /*
-     * Datas modernas do Excel ficam normalmente acima de 20.000.
-     * Isso impede que números da tabela, como 27, 59, 239 e 230,
-     * sejam confundidos com datas.
-     */
-    if (value < 20000 || value > 80000) {
-        return null;
-    }
-
-    const parsed =
-        XLSX?.SSF?.parse_date_code?.(value);
-
-    if (
-        !parsed ||
-        !parsed.y ||
-        !parsed.m ||
-        !parsed.d
-    ) {
-        return null;
-    }
-
-    return createDivergenceDate(
-        parsed.d,
-        parsed.m,
-        parsed.y,
-        parsed.y
-    );
-}
-
-function extractDivergenceDatesFromText(
-    value,
-    fallbackYear
-) {
-    const source =
-        String(value || "").trim();
-
-    if (!source) return [];
-
-    const dates = [];
-
-    const addDate = date => {
-        const normalized =
-            normalizeDetectedDivergenceDate(
-                date
-            );
-
-        if (!normalized) return;
-
-        const key =
-            [
-                normalized.getFullYear(),
-                normalized.getMonth(),
-                normalized.getDate()
-            ].join("-");
-
-        if (
-            !dates.some(item =>
-                [
-                    item.getFullYear(),
-                    item.getMonth(),
-                    item.getDate()
-                ].join("-") === key
-            )
-        ) {
-            dates.push(normalized);
-        }
-    };
-
-    /*
-     * Formatos encontrados dentro de textos:
-     * 09/07
-     * 09/07/2026
-     * 09-07-2026
-     * PERÍODO: 09/07 A 15/07
-     */
-    const brazilianMatches = [
-        ...source.matchAll(
-            /(?:^|[^\d])(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?(?=$|[^\d])/g
-        )
-    ];
-
-    brazilianMatches.forEach(match => {
-        addDate(
-            createDivergenceDate(
-                match[1],
-                match[2],
-                match[3],
-                fallbackYear
-            )
-        );
-    });
-
-    /*
-     * Formato ISO: 2026-07-09
-     */
-    const isoMatches = [
-        ...source.matchAll(
-            /(?:^|[^\d])(\d{4})-(\d{1,2})-(\d{1,2})(?=$|[^\d])/g
-        )
-    ];
-
-    isoMatches.forEach(match => {
-        addDate(
-            createDivergenceDate(
-                match[3],
-                match[2],
-                match[1],
-                fallbackYear
-            )
-        );
-    });
-
-    return dates;
-}
-
-function isDivergencePeriodLabel(value) {
-    const normalized =
-        normalizeName(value);
-
-    if (!normalized) return false;
-
-    return (
-        normalized.includes("PERIODO") ||
-        normalized.includes("DATA INICIAL") ||
-        normalized.includes("DATA FINAL") ||
-        normalized.includes("DT INICIAL") ||
-        normalized.includes("DT FINAL") ||
-        normalized === "DATA" ||
-        normalized.includes("REFERENCIA") ||
-        normalized.includes("SEMANA")
-    );
-}
-
-function collectDivergenceDatesFromCells(
-    cells,
-    fallbackYear
-) {
-    const dates = [];
-
-    const addDate = date => {
-        const normalized =
-            normalizeDetectedDivergenceDate(
-                date
-            );
-
-        if (!normalized) return;
-
-        const timestamp =
-            normalized.getTime();
-
-        if (
-            !dates.some(item =>
-                item.getTime() === timestamp
-            )
-        ) {
-            dates.push(normalized);
-        }
-    };
-
-    cells.forEach(value => {
-        if (
-            value instanceof Date &&
-            !Number.isNaN(value.getTime())
-        ) {
-            addDate(value);
-            return;
-        }
-
-        const serialDate =
-            parseDivergenceExcelSerial(value);
-
-        if (serialDate) {
-            addDate(serialDate);
-            return;
-        }
-
-        if (typeof value === "string") {
-            extractDivergenceDatesFromText(
-                value,
-                fallbackYear
-            ).forEach(addDate);
-        }
-    });
-
-    return dates;
-}
-
-function detectDivergencePeriod(entry) {
-    const matrix =
-        Array.isArray(entry.matrix)
-            ? entry.matrix
-            : [];
-
-    const fallbackYear =
-        getDivergenceFallbackYear(entry);
-
-    const explicitDates = [];
-
-    const addExplicitDate = date => {
-        const normalized =
-            normalizeDetectedDivergenceDate(
-                date
-            );
-
-        if (!normalized) return;
-
-        if (
-            !explicitDates.some(item =>
-                item.getTime() === normalized.getTime()
-            )
-        ) {
-            explicitDates.push(normalized);
-        }
-    };
-
-    /*
-     * Primeiro procura uma linha identificada como PERÍODO, DATA,
-     * REFERÊNCIA ou SEMANA. Quando encontra, lê a linha inteira e
-     * também duas linhas acima e abaixo. Isso cobre:
-     *
-     * PERÍODO: | 09/07 | 15/07
-     * PERÍODO: 09/07 A 15/07
-     * células mescladas;
-     * datas reais;
-     * datas armazenadas como números seriais do Excel.
-     */
-    const maxRows =
-        Math.min(matrix.length, 100);
-
-    for (
-        let rowIndex = 0;
-        rowIndex < maxRows;
-        rowIndex++
-    ) {
-        const row =
-            matrix[rowIndex] || [];
-
-        const hasPeriodLabel =
-            row.some(
-                isDivergencePeriodLabel
-            );
-
-        if (!hasPeriodLabel) {
-            continue;
-        }
-
-        const firstRow =
-            Math.max(0, rowIndex - 2);
-
-        const lastRow =
-            Math.min(
-                matrix.length - 1,
-                rowIndex + 2
-            );
-
-        for (
-            let nearbyRowIndex = firstRow;
-            nearbyRowIndex <= lastRow;
-            nearbyRowIndex++
-        ) {
-            collectDivergenceDatesFromCells(
-                matrix[nearbyRowIndex] || [],
-                fallbackYear
-            ).forEach(addExplicitDate);
-        }
-    }
-
-    /*
-     * Também verifica o nome do arquivo e o nome da aba.
-     */
-    extractDivergenceDatesFromText(
-        entry.fileName,
-        fallbackYear
-    ).forEach(addExplicitDate);
-
-    extractDivergenceDatesFromText(
-        entry.sheetName,
-        fallbackYear
-    ).forEach(addExplicitDate);
-
-    /*
-     * Compatibilidade com planilhas que possuem as datas no topo,
-     * mas não utilizam a palavra PERÍODO.
-     *
-     * Aqui são aceitas strings, objetos Date e somente números seriais
-     * plausíveis. Valores comuns da tabela não entram.
-     */
-    if (!explicitDates.length) {
-        matrix
-            .slice(0, 25)
-            .forEach(row => {
-                collectDivergenceDatesFromCells(
-                    row || [],
-                    fallbackYear
-                ).forEach(addExplicitDate);
-            });
-    }
-
-    explicitDates.sort(
-        (first, second) =>
-            first.getTime() -
-            second.getTime()
-    );
-
-    if (!explicitDates.length) {
-        /*
-         * Não associa mais a planilha ao período em que foi importada.
-         * Isso era o erro que fazia os dados aparecerem em junho só
-         * porque o arquivo tinha sido importado enquanto junho estava
-         * selecionado.
-         */
-        return null;
-    }
-
-    return {
-        startDate:
-            explicitDates[0],
-        endDate:
-            explicitDates[
-                explicitDates.length - 1
-            ],
-        source: "workbook"
-    };
-}
-
-function divergenceEntryMatchesCurrentFilter(entry) {
-    if (!isImportDateFilterActive()) {
-        return true;
-    }
-
-    const {
-        startDate,
-        endDate
-    } = getImportDateRange();
-
-    const currentStart =
-        startDate || endDate;
-
-    const currentEnd =
-        endDate || startDate;
-
-    if (!currentStart || !currentEnd) {
-        return true;
-    }
-
-    const detectedPeriod =
-        detectDivergencePeriod(entry);
-
-    if (!detectedPeriod) {
-        return false;
-    }
-
-    return (
-        detectedPeriod.startDate <= currentEnd &&
-        currentStart <= detectedPeriod.endDate
-    );
-}
-
 function parseDivergSheet(matrix) {
     if (!isMatrix(matrix) || !matrix.length) {
         return null;
@@ -2060,93 +1338,48 @@ function parseDivergSheet(matrix) {
     let headerRow = -1;
     let farmColumn = -1;
 
-    for (
-        let rowIndex = 0;
-        rowIndex < matrix.length;
-        rowIndex++
-    ) {
-        const row =
-            matrix[rowIndex] || [];
-
-        const possibleFarmColumn =
-            findColumnInRow(
-                row,
-                ["FAZENDA"]
-            );
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+        const row = matrix[rowIndex] || [];
+        const possibleFarmColumn = findColumnInRow(row, ["FAZENDA"]);
 
         if (possibleFarmColumn !== -1) {
             headerRow = rowIndex;
-            farmColumn =
-                possibleFarmColumn;
+            farmColumn = possibleFarmColumn;
             break;
         }
     }
 
-    if (
-        headerRow === -1 ||
-        farmColumn === -1
-    ) {
+    if (headerRow === -1 || farmColumn === -1) {
         return null;
     }
 
-    const header =
-        matrix[headerRow] || [];
+    const header = matrix[headerRow] || [];
 
-    let nascDiarioColumn =
-        findColumnInRow(
-            header,
-            [
-                "NASC DIARIO",
-                "NASCIMENTO DIARIO"
-            ]
-        );
+    let nascDiarioColumn = findColumnInRow(header, [
+        "NASC DIARIO",
+        "NASCIMENTO DIARIO"
+    ]);
 
-    let nascSistemaColumn =
-        findColumnInRow(
-            header,
-            [
-                "NASC SISTEMA",
-                "NASCIMENTO SISTEMA"
-            ]
-        );
+    let nascSistemaColumn = findColumnInRow(header, [
+        "NASC SISTEMA",
+        "NASCIMENTO SISTEMA"
+    ]);
 
-    let mortesDiarioColumn =
-        findColumnInRow(
-            header,
-            [
-                "MORTES DIARIO",
-                "MORTE DIARIO"
-            ]
-        );
+    let mortesDiarioColumn = findColumnInRow(header, [
+        "MORTES DIARIO",
+        "MORTE DIARIO"
+    ]);
 
-    let mortesSistemaColumn =
-        findColumnInRow(
-            header,
-            [
-                "MORTES SISTEMA",
-                "MORTE SISTEMA"
-            ]
-        );
+    let mortesSistemaColumn = findColumnInRow(header, [
+        "MORTES SISTEMA",
+        "MORTE SISTEMA"
+    ]);
 
-    if (nascDiarioColumn === -1) {
-        nascDiarioColumn =
-            farmColumn + 1;
-    }
-
-    if (nascSistemaColumn === -1) {
-        nascSistemaColumn =
-            farmColumn + 2;
-    }
-
-    if (mortesDiarioColumn === -1) {
-        mortesDiarioColumn =
-            farmColumn + 4;
-    }
-
-    if (mortesSistemaColumn === -1) {
-        mortesSistemaColumn =
-            farmColumn + 5;
-    }
+    /* Compatibilidade com a estrutura antiga por posição. */
+    if (nascDiarioColumn === -1) nascDiarioColumn = farmColumn + 1;
+    if (nascSistemaColumn === -1) nascSistemaColumn = farmColumn + 2;
+    if (mortesDiarioColumn === -1) mortesDiarioColumn = farmColumn + 4;
+    if (mortesSistemaColumn === -1) mortesSistemaColumn = farmColumn + 5;
 
     const rows = [];
 
@@ -2155,89 +1388,36 @@ function parseDivergSheet(matrix) {
         rowIndex < matrix.length;
         rowIndex++
     ) {
-        const row =
-            matrix[rowIndex] || [];
+        const row = matrix[rowIndex] || [];
+        const farm = String(row[farmColumn] ?? "").trim();
 
-        const farm =
-            String(
-                row[farmColumn] ?? ""
-            ).trim();
-
-        if (shouldIgnoreFarmRow(farm)) {
-            continue;
-        }
+        if (shouldIgnoreFarmRow(farm)) continue;
 
         rows.push({
             farm,
-            nd:
-                toNumberOrEmpty(
-                    row[nascDiarioColumn]
-                ),
-            ns:
-                toNumberOrEmpty(
-                    row[nascSistemaColumn]
-                ),
-            md:
-                toNumberOrEmpty(
-                    row[mortesDiarioColumn]
-                ),
-            ms:
-                toNumberOrEmpty(
-                    row[mortesSistemaColumn]
-                )
+            nd: toNumberOrEmpty(row[nascDiarioColumn]),
+            ns: toNumberOrEmpty(row[nascSistemaColumn]),
+            md: toNumberOrEmpty(row[mortesDiarioColumn]),
+            ms: toNumberOrEmpty(row[mortesSistemaColumn])
         });
     }
 
-    return rows.length
-        ? rows
-        : null;
+    return rows.length ? rows : null;
 }
 
 function mergeParsedDivergenceSheets() {
-    const matchingEntries =
-        getImportedSheetEntries(
-            "divergencias"
-        )
-            .filter(
-                divergenceEntryMatchesCurrentFilter
-            );
+    const rows = getImportedMatrices("divergencias")
+        .flatMap(matrix => parseDivergSheet(matrix) || []);
 
-    if (!matchingEntries.length) {
-        return {
-            rows: [],
-            periodFound: false
-        };
-    }
+    if (!rows.length) return null;
 
-    const rows =
-        matchingEntries.flatMap(entry =>
-            parseDivergSheet(
-                entry.matrix
-            ) || []
-        );
-
-    if (!rows.length) {
-        return {
-            rows: [],
-            periodFound: false
-        };
-    }
-
-    const farms =
-        new Map();
+    const farms = new Map();
 
     rows.forEach(row => {
-        farms.set(
-            normalizeName(row.farm),
-            row
-        );
+        farms.set(normalizeName(row.farm), row);
     });
 
-    return {
-        rows:
-            [...farms.values()],
-        periodFound: true
-    };
+    return [...farms.values()];
 }
 
 
@@ -2394,38 +1574,11 @@ function applyMonthlySheet(parsed, unmatched) {
     return true;
 }
 
-function clearDivergencePanel() {
-    const cleared = {};
-
-    state.farms.forEach(
-        (farm, farmIndex) => {
-            cleared[farmIndex] = {
-                nd: "",
-                ns: "",
-                md: "",
-                ms: ""
-            };
-        }
-    );
-
-    state.diverg = cleared;
-}
-
 function applyDivergSheet(parsed, unmatched) {
-    clearDivergencePanel();
+    if (!parsed?.length) return false;
 
-    if (
-        !parsed ||
-        !parsed.periodFound ||
-        !Array.isArray(parsed.rows) ||
-        !parsed.rows.length
-    ) {
-        return false;
-    }
-
-    parsed.rows.forEach(row => {
-        const farmIndex =
-            matchFarmIndex(row.farm);
+    parsed.forEach(row => {
+        const farmIndex = matchFarmIndex(row.farm);
 
         if (farmIndex === -1) {
             unmatched.add(row.farm);
@@ -2433,22 +1586,10 @@ function applyDivergSheet(parsed, unmatched) {
         }
 
         state.diverg[farmIndex] = {
-            nd:
-                row.nd === ""
-                    ? ""
-                    : String(row.nd),
-            ns:
-                row.ns === ""
-                    ? ""
-                    : String(row.ns),
-            md:
-                row.md === ""
-                    ? ""
-                    : String(row.md),
-            ms:
-                row.ms === ""
-                    ? ""
-                    : String(row.ms)
+            nd: row.nd === "" ? "" : String(row.nd),
+            ns: row.ns === "" ? "" : String(row.ns),
+            md: row.md === "" ? "" : String(row.md),
+            ms: row.ms === "" ? "" : String(row.ms)
         };
     });
 
@@ -2533,10 +1674,6 @@ function preencherSistema(options = {}) {
 
     if (selectedDays.length) {
         remapDailyDataToDays(selectedDays);
-    } else if (noDatesInFilter) {
-        clearDailyPanelsForCurrentFilter(
-            dailyKeys.filter(hasImportedData)
-        );
     }
 
     dailyKeys.forEach(key => {
@@ -2565,7 +1702,6 @@ function preencherSistema(options = {}) {
         if (applyMonthlySheet(parsed.mensal, unmatched)) {
             found.push("mensal");
         } else {
-            clearMonthlyPanelForCurrentFilter();
             failed.push("mensal");
         }
     }
@@ -2588,10 +1724,7 @@ function preencherSistema(options = {}) {
         saveState();
     }
 
-    /*
-     * Não limpa importedData: as matrizes permanecem como fonte
-     * de verdade para reaplicar o filtro imediatamente.
-     */
+    clearImportedData();
 
     const result = {
         found,
@@ -2684,52 +1817,15 @@ async function importLocalExcelFiles(event) {
                 cellDates: true
             });
 
-            const result = processWorkbook(
-                workbook,
-                file.name,
-                {
-                    sourceType: "local",
-                    fileName: file.name,
-                    filterStart:
-                        String(state?.filterStart || ""),
-                    filterEnd:
-                        String(state?.filterEnd || "")
-                }
-            );
+            const result = processWorkbook(workbook, file.name);
 
             if (result.recognized.length) {
                 recognizedSomething = true;
 
-                const cacheKey =
-                    createWorkbookCacheKey(file);
-
-                try {
-                    await saveLocalWorkbookToCache({
-                        cacheKey,
-                        fileName: file.name,
-                        buffer,
-                        lastModified: file.lastModified
-                    });
-                } catch (cacheError) {
-                    console.warn(
-                        `A planilha ${file.name} foi importada, mas não pôde ser guardada no cache:`,
-                        cacheError
-                    );
-                }
-
                 registerImportedLocalFile(
                     file.name,
                     result.recognizedSheets,
-                    result.ignored,
-                    {
-                        cacheKey,
-                        fileSize: file.size,
-                        lastModified: file.lastModified,
-                        importFilterStart:
-                            String(state?.filterStart || ""),
-                        importFilterEnd:
-                            String(state?.filterEnd || "")
-                    }
+                    result.ignored
                 );
             }
 
@@ -2784,302 +1880,6 @@ async function importLocalExcelFiles(event) {
     showInlineWarning(
         buildImportMessage(result, errors, ignoredSheets)
     );
-}
-
-
-/* ============================================================
-   REPROCESSAMENTO DOS ARQUIVOS LOCAIS
-============================================================ */
-
-async function loadImportedLocalFilesFromCache(options = {}) {
-    const {
-        clearBeforeLoad = true
-    } = options;
-
-    const files = getImportedLocalFiles();
-
-    if (clearBeforeLoad) {
-        clearImportedData();
-    }
-
-    const errors = [];
-    const loadedFiles = [];
-
-    for (const fileRecord of files) {
-        try {
-            const cached =
-                await getLocalWorkbookFromCache(
-                    fileRecord.cacheKey
-                );
-
-            if (!cached?.buffer) {
-                errors.push(
-                    `${fileRecord.fileName}: arquivo não está mais disponível neste navegador`
-                );
-                continue;
-            }
-
-            const workbook = XLSX.read(
-                cached.buffer,
-                {
-                    type: "array",
-                    cellDates: true
-                }
-            );
-
-            const result = processWorkbook(
-                workbook,
-                fileRecord.fileName,
-                {
-                    sourceType: "local",
-                    fileName:
-                        fileRecord.fileName,
-                    filterStart:
-                        String(
-                            fileRecord.importFilterStart ||
-                            ""
-                        ),
-                    filterEnd:
-                        String(
-                            fileRecord.importFilterEnd ||
-                            ""
-                        )
-                }
-            );
-
-            if (result.recognized.length) {
-                loadedFiles.push(fileRecord.fileName);
-            } else {
-                errors.push(
-                    `${fileRecord.fileName}: nenhuma aba reconhecida`
-                );
-            }
-        } catch (error) {
-            console.error(
-                `Erro ao recarregar ${fileRecord.fileName}:`,
-                error
-            );
-
-            errors.push(
-                `${fileRecord.fileName}: ${error?.message || "erro desconhecido"}`
-            );
-        }
-    }
-
-    return {
-        loadedFiles,
-        errors
-    };
-}
-
-async function refreshImportedLocalFiles(options = {}) {
-    const {
-        silent = false,
-        save = true
-    } = options;
-
-    if (importedDataRefreshPromise) {
-        return importedDataRefreshPromise;
-    }
-
-    importedDataRefreshPromise = (async () => {
-        const cacheResult =
-            await loadImportedLocalFilesFromCache({
-                clearBeforeLoad: true
-            });
-
-        if (!EXCEL_PANEL_KEYS.some(hasImportedData)) {
-            if (!silent) {
-                showInlineWarning(
-                    cacheResult.errors.length
-                        ? "Não foi possível recarregar os arquivos locais. " +
-                          cacheResult.errors.join(" | ")
-                        : "Nenhum arquivo local está disponível para atualização."
-                );
-            }
-
-            return {
-                found: [],
-                failed: [],
-                unmatched: [],
-                noDatesInFilter: false,
-                cacheErrors: cacheResult.errors
-            };
-        }
-
-        const result = preencherSistema({
-            silent: true
-        });
-
-        if (save && typeof saveState === "function") {
-            saveState();
-        }
-
-        renderImportedWorkbookStatus();
-
-        if (!silent) {
-            showInlineWarning(
-                buildImportMessage(
-                    result,
-                    cacheResult.errors
-                )
-            );
-        }
-
-        return {
-            ...result,
-            cacheErrors: cacheResult.errors
-        };
-    })();
-
-    try {
-        return await importedDataRefreshPromise;
-    } finally {
-        importedDataRefreshPromise = null;
-    }
-}
-
-/*
- * Reaplica o filtro usando as matrizes já carregadas. Caso a página
- * tenha sido recarregada e importedData esteja vazio, busca os bytes
- * no IndexedDB e reconstrói as matrizes automaticamente.
- */
-
-function clearPanelsForEmptyFilter() {
-    const dailyKeys = [
-        "campo",
-        "abastecimento",
-        "diario"
-    ];
-
-    state.days = [];
-
-    dailyKeys.forEach(key => {
-        state.data[key] = {};
-
-        state.farms.forEach((farm, farmIndex) => {
-            state.data[key][farmIndex] = {};
-        });
-
-        if (
-            state.dailyDataReady &&
-            typeof state.dailyDataReady === "object"
-        ) {
-            state.dailyDataReady[key] = false;
-        }
-    });
-
-    state.monthly = {};
-
-    state.farms.forEach((farm, farmIndex) => {
-        state.monthly[farmIndex] = "blank";
-    });
-
-    state.diverg = {};
-
-    state.farms.forEach((farm, farmIndex) => {
-        state.diverg[farmIndex] = {
-            nd: "",
-            ns: "",
-            md: "",
-            ms: ""
-        };
-    });
-
-    const referenceDate =
-        typeof getMonthlyReferenceDate === "function"
-            ? getMonthlyReferenceDate()
-            : new Date();
-
-    if (
-        typeof formatMonthlyLabel === "function"
-    ) {
-        state.monthLabel =
-            formatMonthlyLabel(referenceDate);
-    }
-
-    ensureData();
-}
-
-async function reapplyImportedDataForCurrentFilter(options = {}) {
-    const {
-        silent = true,
-        save = true
-    } = options;
-
-    /*
-     * Sempre reconstrói importedData usando TODOS os arquivos locais
-     * guardados no IndexedDB.
-     *
-     * Antes, o código reutilizava importedData quando encontrava pelo
-     * menos uma planilha carregada. Isso falhava quando uma importação
-     * mais recente continha apenas Mensal, Campo ou outro painel:
-     * o Diário deixava de existir em importedData e não voltava ao
-     * retornar para o período anterior.
-     */
-    const localFiles =
-        typeof getImportedLocalFiles === "function"
-            ? getImportedLocalFiles()
-            : [];
-
-    if (localFiles.length) {
-        return refreshImportedLocalFiles({
-            silent,
-            save
-        });
-    }
-
-    /*
-     * Compatibilidade com dados vindos exclusivamente de URL:
-     * se não há arquivos locais, reaplica as matrizes que já estiverem
-     * disponíveis em importedData.
-     */
-    if (EXCEL_PANEL_KEYS.some(hasImportedData)) {
-        const result = preencherSistema({
-            silent: true
-        });
-
-        if (save && typeof saveState === "function") {
-            saveState();
-        }
-
-        if (!silent) {
-            showInlineWarning(
-                buildImportMessage(result)
-            );
-        }
-
-        return result;
-    }
-
-    /*
-     * Não existe nenhuma fonte local nem matriz disponível.
-     * Limpa os painéis para o período atual não conservar dados antigos.
-     */
-    clearPanelsForEmptyFilter();
-
-    if (typeof renderAll === "function") {
-        renderAll();
-    }
-
-    if (save && typeof saveState === "function") {
-        saveState();
-    }
-
-    return {
-        found: [],
-        failed: [],
-        unmatched: [],
-        noDatesInFilter: true
-    };
-}
-
-/*
- * Função pública usada pelo botão Atualizar. O events.js poderá
- * chamar esta função junto da atualização das URLs.
- */
-async function refreshAllImportedSources(options = {}) {
-    return refreshImportedLocalFiles(options);
 }
 
 
