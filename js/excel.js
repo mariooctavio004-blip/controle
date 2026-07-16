@@ -1609,63 +1609,247 @@ function rangesOverlap(
     );
 }
 
-function detectDivergenceReferenceDates(
-    matrix,
-    sheetName = ""
+function getDivergenceFallbackYear(entry = {}) {
+    const importStart =
+        normalizeFilterDate(entry.filterStart);
+
+    if (importStart) {
+        return importStart.getFullYear();
+    }
+
+    const importEnd =
+        normalizeFilterDate(entry.filterEnd);
+
+    if (importEnd) {
+        return importEnd.getFullYear();
+    }
+
+    const filterStart =
+        normalizeFilterDate(state?.filterStart);
+
+    if (filterStart) {
+        return filterStart.getFullYear();
+    }
+
+    const filterEnd =
+        normalizeFilterDate(state?.filterEnd);
+
+    if (filterEnd) {
+        return filterEnd.getFullYear();
+    }
+
+    return new Date().getFullYear();
+}
+
+function createDivergenceDate(
+    day,
+    month,
+    year,
+    fallbackYear
 ) {
+    let resolvedYear =
+        year === undefined ||
+        year === null ||
+        year === ""
+            ? fallbackYear
+            : Number(year);
+
+    if (resolvedYear < 100) {
+        resolvedYear += 2000;
+    }
+
+    const date =
+        new Date(
+            resolvedYear,
+            Number(month) - 1,
+            Number(day)
+        );
+
+    if (
+        Number.isNaN(date.getTime()) ||
+        date.getDate() !== Number(day) ||
+        date.getMonth() !== Number(month) - 1
+    ) {
+        return null;
+    }
+
+    return date;
+}
+
+function extractDivergenceDatesFromText(
+    value,
+    fallbackYear
+) {
+    const text =
+        String(value || "").trim();
+
+    if (!text) return [];
+
     const dates = [];
 
-    const pushDate = value => {
-        const parsed =
-            parseExcelDateValue(value);
-
-        if (
-            parsed &&
-            !Number.isNaN(parsed.getTime())
-        ) {
-            dates.push(parsed);
-        }
-    };
-
-    matrix
-        .slice(0, 20)
-        .forEach(row => {
-            (row || [])
-                .slice(0, 20)
-                .forEach(pushDate);
-        });
-
-    const nameText =
-        String(sheetName || "");
-
-    const matches = [
-        ...nameText.matchAll(
-            /(\d{1,2})[\/_-](\d{1,2})(?:[\/_-](\d{2,4}))?/g
+    /*
+     * Captura datas mesmo quando estiverem dentro de textos como:
+     * "PERÍODO: 09/07 A 15/07"
+     * "09/07/2026 - 15/07/2026"
+     * "Divergências_09-07_15-07"
+     */
+    const brazilianMatches = [
+        ...text.matchAll(
+            /(?:^|[^\d])(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?(?=$|[^\d])/g
         )
     ];
 
-    matches.forEach(match => {
-        let year = match[3]
-            ? Number(match[3])
-            : getMonthlyReferenceDate().getFullYear();
-
-        if (year < 100) {
-            year += 2000;
-        }
-
+    brazilianMatches.forEach(match => {
         const date =
-            new Date(
-                year,
-                Number(match[2]) - 1,
-                Number(match[1])
+            createDivergenceDate(
+                match[1],
+                match[2],
+                match[3],
+                fallbackYear
             );
 
-        if (!Number.isNaN(date.getTime())) {
+        if (date) {
+            dates.push(date);
+        }
+    });
+
+    const isoMatches = [
+        ...text.matchAll(
+            /(?:^|[^\d])(\d{4})-(\d{1,2})-(\d{1,2})(?=$|[^\d])/g
+        )
+    ];
+
+    isoMatches.forEach(match => {
+        const date =
+            createDivergenceDate(
+                match[3],
+                match[2],
+                match[1],
+                fallbackYear
+            );
+
+        if (date) {
             dates.push(date);
         }
     });
 
     return dates;
+}
+
+function detectDivergencePeriod(entry) {
+    const fallbackYear =
+        getDivergenceFallbackYear(entry);
+
+    const detectedDates = [];
+
+    const addDate = date => {
+        if (
+            !(date instanceof Date) ||
+            Number.isNaN(date.getTime())
+        ) {
+            return;
+        }
+
+        const normalized =
+            new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                date.getDate()
+            );
+
+        const key =
+            normalized.toISOString().slice(0, 10);
+
+        if (
+            !detectedDates.some(item =>
+                item.toISOString().slice(0, 10) === key
+            )
+        ) {
+            detectedDates.push(normalized);
+        }
+    };
+
+    /*
+     * Lê somente a região de cabeçalho. Valores numéricos das linhas
+     * (27, 239, 59...) não são tratados como datas do Excel.
+     */
+    (entry.matrix || [])
+        .slice(0, 20)
+        .forEach(row => {
+            (row || [])
+                .slice(0, 20)
+                .forEach(value => {
+                    if (
+                        value instanceof Date &&
+                        !Number.isNaN(value.getTime())
+                    ) {
+                        addDate(value);
+                        return;
+                    }
+
+                    if (typeof value !== "string") {
+                        return;
+                    }
+
+                    extractDivergenceDatesFromText(
+                        value,
+                        fallbackYear
+                    ).forEach(addDate);
+                });
+        });
+
+    extractDivergenceDatesFromText(
+        entry.sheetName,
+        fallbackYear
+    ).forEach(addDate);
+
+    extractDivergenceDatesFromText(
+        entry.fileName,
+        fallbackYear
+    ).forEach(addDate);
+
+    detectedDates.sort(
+        (first, second) =>
+            first.getTime() - second.getTime()
+    );
+
+    if (detectedDates.length) {
+        return {
+            startDate:
+                detectedDates[0],
+            endDate:
+                detectedDates[
+                    detectedDates.length - 1
+                ],
+            source: "workbook"
+        };
+    }
+
+    /*
+     * Só usa o período da importação quando a planilha realmente não
+     * possui nenhuma data em cabeçalho, nome do arquivo ou nome da aba.
+     */
+    const importStart =
+        normalizeFilterDate(
+            entry.filterStart
+        );
+
+    const importEnd =
+        normalizeFilterDate(
+            entry.filterEnd
+        ) || importStart;
+
+    if (importStart || importEnd) {
+        return {
+            startDate:
+                importStart || importEnd,
+            endDate:
+                importEnd || importStart,
+            source: "import"
+        };
+    }
+
+    return null;
 }
 
 function divergenceEntryMatchesCurrentFilter(entry) {
@@ -1682,57 +1866,27 @@ function divergenceEntryMatchesCurrentFilter(entry) {
         return true;
     }
 
-    /*
-     * Prioridade 1: período em que o arquivo local foi importado.
-     * Isso permite que uma planilha de divergência sem coluna de data
-     * seja vinculada ao filtro que estava ativo no momento da importação.
-     */
-    if (
-        entry.filterStart ||
-        entry.filterEnd
-    ) {
-        return rangesOverlap(
-            entry.filterStart,
-            entry.filterEnd,
-            state?.filterStart,
-            state?.filterEnd
+    const detectedPeriod =
+        detectDivergencePeriod(entry);
+
+    if (detectedPeriod) {
+        const currentStart =
+            startDate || endDate;
+
+        const currentEnd =
+            endDate || startDate;
+
+        return (
+            detectedPeriod.startDate <= currentEnd &&
+            currentStart <= detectedPeriod.endDate
         );
     }
 
     /*
-     * Prioridade 2: datas encontradas dentro da planilha ou no nome da aba.
+     * Uma fonte sem qualquer informação de período não pode aparecer
+     * em datas aleatórias. Ela fica oculta até possuir uma data válida.
      */
-    const detectedDates =
-        detectDivergenceReferenceDates(
-            entry.matrix,
-            entry.sheetName
-        );
-
-    if (detectedDates.length) {
-        return detectedDates.some(date => {
-            if (
-                startDate &&
-                date < startDate
-            ) {
-                return false;
-            }
-
-            if (
-                endDate &&
-                date > endDate
-            ) {
-                return false;
-            }
-
-            return true;
-        });
-    }
-
-    /*
-     * URLs antigas podem não possuir metadados de período.
-     * Mantemos compatibilidade para não apagar uma fonte online válida.
-     */
-    return entry.sourceType === "url";
+    return false;
 }
 
 function parseDivergSheet(matrix) {
