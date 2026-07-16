@@ -237,6 +237,20 @@ function registerImportedLocalFile(fileName, sheets = [], ignoredSheets = [], ca
             Number(cacheInfo.fileSize || files[existingIndex]?.fileSize || 0),
         lastModified:
             Number(cacheInfo.lastModified || files[existingIndex]?.lastModified || 0),
+        importFilterStart:
+            String(
+                cacheInfo.importFilterStart ??
+                files[existingIndex]?.importFilterStart ??
+                state?.filterStart ??
+                ""
+            ),
+        importFilterEnd:
+            String(
+                cacheInfo.importFilterEnd ??
+                files[existingIndex]?.importFilterEnd ??
+                state?.filterEnd ??
+                ""
+            ),
         importedAt: new Date().toISOString(),
         lastSync: new Date().toLocaleTimeString("pt-BR", {
             hour: "2-digit",
@@ -524,55 +538,92 @@ function isMatrix(value) {
     );
 }
 
-function addImportedSheet(key, matrix, sheetName = "") {
+function addImportedSheet(
+    key,
+    matrix,
+    sheetName = "",
+    sourceContext = {}
+) {
     if (!EXCEL_PANEL_KEYS.includes(key)) return;
     if (!isMatrix(matrix) || !matrix.length) return;
 
     const current = importedData[key];
 
-    /*
-     * Formato novo: lista de abas.
-     * Cada item guarda nome e matriz.
-     */
     if (!Array.isArray(current) || !current.length) {
         importedData[key] = [];
     } else if (isMatrix(current)) {
-        /*
-         * Compatibilidade: o SharePoint pode ter colocado uma matriz
-         * diretamente em importedData[key].
-         */
         importedData[key] = [
             {
                 sheetName: EXCEL_PANEL_LABELS[key],
-                matrix: current
+                matrix: current,
+                sourceType: "url",
+                filterStart: "",
+                filterEnd: ""
             }
         ];
     }
 
     importedData[key].push({
         sheetName,
-        matrix
+        matrix,
+        sourceType:
+            String(sourceContext.sourceType || "local"),
+        fileName:
+            String(sourceContext.fileName || ""),
+        filterStart:
+            String(sourceContext.filterStart || ""),
+        filterEnd:
+            String(sourceContext.filterEnd || "")
     });
 }
 
-function getImportedMatrices(key) {
+function getImportedSheetEntries(key) {
     const value = importedData[key];
 
     if (!value) return [];
 
-    /* Uma matriz direta, usada pelo SharePoint. */
     if (isMatrix(value)) {
-        return value.length ? [value] : [];
+        return value.length
+            ? [{
+                sheetName: EXCEL_PANEL_LABELS[key],
+                matrix: value,
+                sourceType: "url",
+                fileName: "",
+                filterStart: "",
+                filterEnd: ""
+            }]
+            : [];
     }
 
-    /* Lista de abas criada pela importação local. */
     if (Array.isArray(value)) {
         return value
-            .map(item => item?.matrix)
-            .filter(matrix => isMatrix(matrix) && matrix.length);
+            .filter(item =>
+                item &&
+                isMatrix(item.matrix) &&
+                item.matrix.length
+            )
+            .map(item => ({
+                sheetName:
+                    String(item.sheetName || ""),
+                matrix:
+                    item.matrix,
+                sourceType:
+                    String(item.sourceType || "local"),
+                fileName:
+                    String(item.fileName || ""),
+                filterStart:
+                    String(item.filterStart || ""),
+                filterEnd:
+                    String(item.filterEnd || "")
+            }));
     }
 
     return [];
+}
+
+function getImportedMatrices(key) {
+    return getImportedSheetEntries(key)
+        .map(item => item.matrix);
 }
 
 function hasImportedData(key) {
@@ -590,7 +641,11 @@ function clearImportedData() {
    LEITURA DE TODAS AS ABAS DE UM WORKBOOK
 ============================================================ */
 
-function processWorkbook(workbook, fallbackName = "") {
+function processWorkbook(
+    workbook,
+    fallbackName = "",
+    sourceContext = {}
+) {
     if (
         !workbook ||
         !Array.isArray(workbook.SheetNames) ||
@@ -649,7 +704,17 @@ function processWorkbook(workbook, fallbackName = "") {
             return;
         }
 
-        addImportedSheet(key, matrix, sheetName);
+        addImportedSheet(
+            key,
+            matrix,
+            sheetName,
+            {
+                ...sourceContext,
+                fileName:
+                    sourceContext.fileName ||
+                    fallbackName
+            }
+        );
 
         if (!recognized.includes(key)) {
             recognized.push(key);
@@ -1496,6 +1561,180 @@ function mergeParsedMonthlySheets() {
    PARSER DE DIVERGÊNCIAS
 ============================================================ */
 
+function normalizeFilterDate(value) {
+    const date =
+        isoToDate(String(value || ""));
+
+    if (!date) return null;
+
+    return new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+    );
+}
+
+function rangesOverlap(
+    firstStart,
+    firstEnd,
+    secondStart,
+    secondEnd
+) {
+    const aStart =
+        normalizeFilterDate(firstStart);
+
+    const aEnd =
+        normalizeFilterDate(firstEnd) ||
+        aStart;
+
+    const bStart =
+        normalizeFilterDate(secondStart);
+
+    const bEnd =
+        normalizeFilterDate(secondEnd) ||
+        bStart;
+
+    if (
+        !aStart ||
+        !aEnd ||
+        !bStart ||
+        !bEnd
+    ) {
+        return false;
+    }
+
+    return (
+        aStart <= bEnd &&
+        bStart <= aEnd
+    );
+}
+
+function detectDivergenceReferenceDates(
+    matrix,
+    sheetName = ""
+) {
+    const dates = [];
+
+    const pushDate = value => {
+        const parsed =
+            parseExcelDateValue(value);
+
+        if (
+            parsed &&
+            !Number.isNaN(parsed.getTime())
+        ) {
+            dates.push(parsed);
+        }
+    };
+
+    matrix
+        .slice(0, 20)
+        .forEach(row => {
+            (row || [])
+                .slice(0, 20)
+                .forEach(pushDate);
+        });
+
+    const nameText =
+        String(sheetName || "");
+
+    const matches = [
+        ...nameText.matchAll(
+            /(\d{1,2})[\/_-](\d{1,2})(?:[\/_-](\d{2,4}))?/g
+        )
+    ];
+
+    matches.forEach(match => {
+        let year = match[3]
+            ? Number(match[3])
+            : getMonthlyReferenceDate().getFullYear();
+
+        if (year < 100) {
+            year += 2000;
+        }
+
+        const date =
+            new Date(
+                year,
+                Number(match[2]) - 1,
+                Number(match[1])
+            );
+
+        if (!Number.isNaN(date.getTime())) {
+            dates.push(date);
+        }
+    });
+
+    return dates;
+}
+
+function divergenceEntryMatchesCurrentFilter(entry) {
+    if (!isImportDateFilterActive()) {
+        return true;
+    }
+
+    const {
+        startDate,
+        endDate
+    } = getImportDateRange();
+
+    if (!startDate && !endDate) {
+        return true;
+    }
+
+    /*
+     * Prioridade 1: período em que o arquivo local foi importado.
+     * Isso permite que uma planilha de divergência sem coluna de data
+     * seja vinculada ao filtro que estava ativo no momento da importação.
+     */
+    if (
+        entry.filterStart ||
+        entry.filterEnd
+    ) {
+        return rangesOverlap(
+            entry.filterStart,
+            entry.filterEnd,
+            state?.filterStart,
+            state?.filterEnd
+        );
+    }
+
+    /*
+     * Prioridade 2: datas encontradas dentro da planilha ou no nome da aba.
+     */
+    const detectedDates =
+        detectDivergenceReferenceDates(
+            entry.matrix,
+            entry.sheetName
+        );
+
+    if (detectedDates.length) {
+        return detectedDates.some(date => {
+            if (
+                startDate &&
+                date < startDate
+            ) {
+                return false;
+            }
+
+            if (
+                endDate &&
+                date > endDate
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    /*
+     * URLs antigas podem não possuir metadados de período.
+     * Mantemos compatibilidade para não apagar uma fonte online válida.
+     */
+    return entry.sourceType === "url";
+}
+
 function parseDivergSheet(matrix) {
     if (!isMatrix(matrix) || !matrix.length) {
         return null;
@@ -1504,48 +1743,93 @@ function parseDivergSheet(matrix) {
     let headerRow = -1;
     let farmColumn = -1;
 
-    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
-        const row = matrix[rowIndex] || [];
-        const possibleFarmColumn = findColumnInRow(row, ["FAZENDA"]);
+    for (
+        let rowIndex = 0;
+        rowIndex < matrix.length;
+        rowIndex++
+    ) {
+        const row =
+            matrix[rowIndex] || [];
+
+        const possibleFarmColumn =
+            findColumnInRow(
+                row,
+                ["FAZENDA"]
+            );
 
         if (possibleFarmColumn !== -1) {
             headerRow = rowIndex;
-            farmColumn = possibleFarmColumn;
+            farmColumn =
+                possibleFarmColumn;
             break;
         }
     }
 
-    if (headerRow === -1 || farmColumn === -1) {
+    if (
+        headerRow === -1 ||
+        farmColumn === -1
+    ) {
         return null;
     }
 
-    const header = matrix[headerRow] || [];
+    const header =
+        matrix[headerRow] || [];
 
-    let nascDiarioColumn = findColumnInRow(header, [
-        "NASC DIARIO",
-        "NASCIMENTO DIARIO"
-    ]);
+    let nascDiarioColumn =
+        findColumnInRow(
+            header,
+            [
+                "NASC DIARIO",
+                "NASCIMENTO DIARIO"
+            ]
+        );
 
-    let nascSistemaColumn = findColumnInRow(header, [
-        "NASC SISTEMA",
-        "NASCIMENTO SISTEMA"
-    ]);
+    let nascSistemaColumn =
+        findColumnInRow(
+            header,
+            [
+                "NASC SISTEMA",
+                "NASCIMENTO SISTEMA"
+            ]
+        );
 
-    let mortesDiarioColumn = findColumnInRow(header, [
-        "MORTES DIARIO",
-        "MORTE DIARIO"
-    ]);
+    let mortesDiarioColumn =
+        findColumnInRow(
+            header,
+            [
+                "MORTES DIARIO",
+                "MORTE DIARIO"
+            ]
+        );
 
-    let mortesSistemaColumn = findColumnInRow(header, [
-        "MORTES SISTEMA",
-        "MORTE SISTEMA"
-    ]);
+    let mortesSistemaColumn =
+        findColumnInRow(
+            header,
+            [
+                "MORTES SISTEMA",
+                "MORTE SISTEMA"
+            ]
+        );
 
-    /* Compatibilidade com a estrutura antiga por posição. */
-    if (nascDiarioColumn === -1) nascDiarioColumn = farmColumn + 1;
-    if (nascSistemaColumn === -1) nascSistemaColumn = farmColumn + 2;
-    if (mortesDiarioColumn === -1) mortesDiarioColumn = farmColumn + 4;
-    if (mortesSistemaColumn === -1) mortesSistemaColumn = farmColumn + 5;
+    if (nascDiarioColumn === -1) {
+        nascDiarioColumn =
+            farmColumn + 1;
+    }
+
+    if (nascSistemaColumn === -1) {
+        nascSistemaColumn =
+            farmColumn + 2;
+    }
+
+    if (mortesDiarioColumn === -1) {
+        mortesDiarioColumn =
+            farmColumn + 4;
+    }
+
+    if (mortesSistemaColumn === -1) {
+        mortesSistemaColumn =
+            farmColumn + 5;
+    }
 
     const rows = [];
 
@@ -1554,36 +1838,89 @@ function parseDivergSheet(matrix) {
         rowIndex < matrix.length;
         rowIndex++
     ) {
-        const row = matrix[rowIndex] || [];
-        const farm = String(row[farmColumn] ?? "").trim();
+        const row =
+            matrix[rowIndex] || [];
 
-        if (shouldIgnoreFarmRow(farm)) continue;
+        const farm =
+            String(
+                row[farmColumn] ?? ""
+            ).trim();
+
+        if (shouldIgnoreFarmRow(farm)) {
+            continue;
+        }
 
         rows.push({
             farm,
-            nd: toNumberOrEmpty(row[nascDiarioColumn]),
-            ns: toNumberOrEmpty(row[nascSistemaColumn]),
-            md: toNumberOrEmpty(row[mortesDiarioColumn]),
-            ms: toNumberOrEmpty(row[mortesSistemaColumn])
+            nd:
+                toNumberOrEmpty(
+                    row[nascDiarioColumn]
+                ),
+            ns:
+                toNumberOrEmpty(
+                    row[nascSistemaColumn]
+                ),
+            md:
+                toNumberOrEmpty(
+                    row[mortesDiarioColumn]
+                ),
+            ms:
+                toNumberOrEmpty(
+                    row[mortesSistemaColumn]
+                )
         });
     }
 
-    return rows.length ? rows : null;
+    return rows.length
+        ? rows
+        : null;
 }
 
 function mergeParsedDivergenceSheets() {
-    const rows = getImportedMatrices("divergencias")
-        .flatMap(matrix => parseDivergSheet(matrix) || []);
+    const matchingEntries =
+        getImportedSheetEntries(
+            "divergencias"
+        )
+            .filter(
+                divergenceEntryMatchesCurrentFilter
+            );
 
-    if (!rows.length) return null;
+    if (!matchingEntries.length) {
+        return {
+            rows: [],
+            periodFound: false
+        };
+    }
 
-    const farms = new Map();
+    const rows =
+        matchingEntries.flatMap(entry =>
+            parseDivergSheet(
+                entry.matrix
+            ) || []
+        );
+
+    if (!rows.length) {
+        return {
+            rows: [],
+            periodFound: false
+        };
+    }
+
+    const farms =
+        new Map();
 
     rows.forEach(row => {
-        farms.set(normalizeName(row.farm), row);
+        farms.set(
+            normalizeName(row.farm),
+            row
+        );
     });
 
-    return [...farms.values()];
+    return {
+        rows:
+            [...farms.values()],
+        periodFound: true
+    };
 }
 
 
@@ -1740,11 +2077,38 @@ function applyMonthlySheet(parsed, unmatched) {
     return true;
 }
 
-function applyDivergSheet(parsed, unmatched) {
-    if (!parsed?.length) return false;
+function clearDivergencePanel() {
+    const cleared = {};
 
-    parsed.forEach(row => {
-        const farmIndex = matchFarmIndex(row.farm);
+    state.farms.forEach(
+        (farm, farmIndex) => {
+            cleared[farmIndex] = {
+                nd: "",
+                ns: "",
+                md: "",
+                ms: ""
+            };
+        }
+    );
+
+    state.diverg = cleared;
+}
+
+function applyDivergSheet(parsed, unmatched) {
+    clearDivergencePanel();
+
+    if (
+        !parsed ||
+        !parsed.periodFound ||
+        !Array.isArray(parsed.rows) ||
+        !parsed.rows.length
+    ) {
+        return false;
+    }
+
+    parsed.rows.forEach(row => {
+        const farmIndex =
+            matchFarmIndex(row.farm);
 
         if (farmIndex === -1) {
             unmatched.add(row.farm);
@@ -1752,56 +2116,26 @@ function applyDivergSheet(parsed, unmatched) {
         }
 
         state.diverg[farmIndex] = {
-            nd: row.nd === "" ? "" : String(row.nd),
-            ns: row.ns === "" ? "" : String(row.ns),
-            md: row.md === "" ? "" : String(row.md),
-            ms: row.ms === "" ? "" : String(row.ms)
+            nd:
+                row.nd === ""
+                    ? ""
+                    : String(row.nd),
+            ns:
+                row.ns === ""
+                    ? ""
+                    : String(row.ns),
+            md:
+                row.md === ""
+                    ? ""
+                    : String(row.md),
+            ms:
+                row.ms === ""
+                    ? ""
+                    : String(row.ms)
         };
     });
 
     return true;
-}
-
-
-/* ============================================================
-   LIMPEZA DOS PAINÉIS PARA O PERÍODO ATUAL
-============================================================ */
-
-function clearDailyPanelsForCurrentFilter(keys = [
-    "campo",
-    "abastecimento",
-    "diario"
-]) {
-    state.days = [];
-
-    keys.forEach(key => {
-        state.data[key] = {};
-
-        state.farms.forEach((farm, farmIndex) => {
-            state.data[key][farmIndex] = {};
-        });
-
-        if (!state.dailyDataReady || typeof state.dailyDataReady !== "object") {
-            state.dailyDataReady = {};
-        }
-
-        state.dailyDataReady[key] = true;
-    });
-
-    state.manualEntryEnabled = false;
-}
-
-function clearMonthlyPanelForCurrentFilter() {
-    const newMonthly = {};
-
-    state.farms.forEach((farm, farmIndex) => {
-        newMonthly[farmIndex] = "blank";
-    });
-
-    state.monthly = newMonthly;
-    state.monthLabel = formatMonthlyLabel(
-        getMonthlyReferenceDate()
-    );
 }
 
 
@@ -2033,7 +2367,18 @@ async function importLocalExcelFiles(event) {
                 cellDates: true
             });
 
-            const result = processWorkbook(workbook, file.name);
+            const result = processWorkbook(
+                workbook,
+                file.name,
+                {
+                    sourceType: "local",
+                    fileName: file.name,
+                    filterStart:
+                        String(state?.filterStart || ""),
+                    filterEnd:
+                        String(state?.filterEnd || "")
+                }
+            );
 
             if (result.recognized.length) {
                 recognizedSomething = true;
@@ -2062,7 +2407,11 @@ async function importLocalExcelFiles(event) {
                     {
                         cacheKey,
                         fileSize: file.size,
-                        lastModified: file.lastModified
+                        lastModified: file.lastModified,
+                        importFilterStart:
+                            String(state?.filterStart || ""),
+                        importFilterEnd:
+                            String(state?.filterEnd || "")
                     }
                 );
             }
@@ -2163,7 +2512,22 @@ async function loadImportedLocalFilesFromCache(options = {}) {
 
             const result = processWorkbook(
                 workbook,
-                fileRecord.fileName
+                fileRecord.fileName,
+                {
+                    sourceType: "local",
+                    fileName:
+                        fileRecord.fileName,
+                    filterStart:
+                        String(
+                            fileRecord.importFilterStart ||
+                            ""
+                        ),
+                    filterEnd:
+                        String(
+                            fileRecord.importFilterEnd ||
+                            ""
+                        )
+                }
             );
 
             if (result.recognized.length) {
