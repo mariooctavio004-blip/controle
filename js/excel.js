@@ -292,44 +292,59 @@ function installImportedWorkbookStatusIntegration() {
    RECONHECIMENTO DAS ABAS
 ============================================================ */
 
+const EXCEL_ALLOWED_SHEET_NAMES = {
+    campo: [
+        "OPERACOES EM CAMPO",
+        "OPERACAO EM CAMPO",
+        "CAMPO",
+        "SISFROTA",
+        "RESUMO OPERACOES SISFROTA"
+    ],
+
+    abastecimento: [
+        "ABASTECIMENTO",
+        "CONTROLE DE ABASTECIMENTO"
+    ],
+
+    diario: [
+        "DIARIO DE CAMPO",
+        "DIARIO",
+        "MANEJO REBANHO",
+        "DIARIO DE CAMPO MANEJO REBANHO"
+    ],
+
+    mensal: [
+        "MAPA MENSAL DO REBANHO",
+        "MAPA MENSAL",
+        "FECHAMENTO MENSAL",
+        "MENSAL"
+    ],
+
+    divergencias: [
+        "DIVERGENCIAS",
+        "DIVERGENCIA",
+        "DIVERGENCIAS ENTRE DIARIO E SISTEMA"
+    ]
+};
+
 function classifySheetName(name) {
     const normalized = normalizeName(name);
 
     if (!normalized) return null;
 
-    if (normalized.includes("DIVERG")) {
-        return "divergencias";
-    }
-
-    if (normalized.includes("ABASTE")) {
-        return "abastecimento";
-    }
-
-    if (
-        normalized.includes("DIARIO") ||
-        normalized.includes("MANEJO")
-    ) {
-        return "diario";
-    }
-
-    if (
-        normalized.includes("MAPA MENSAL") ||
-        normalized.includes("FECHAMENTO MENSAL") ||
-        normalized.includes("MENSAL")
-    ) {
-        return "mensal";
-    }
-
-    if (
-        normalized.includes("OPERAC") ||
-        normalized.includes("SISFROTA") ||
-        normalized.includes("HORIMETRO") ||
-        normalized === "CAMPO"
-    ) {
-        return "campo";
+    for (const [key, allowedNames] of Object.entries(
+        EXCEL_ALLOWED_SHEET_NAMES
+    )) {
+        if (allowedNames.includes(normalized)) {
+            return key;
+        }
     }
 
     return null;
+}
+
+function isAllowedExcelSheetName(name) {
+    return Boolean(classifySheetName(name));
 }
 
 function sheetToMatrix(sheet) {
@@ -500,7 +515,6 @@ function processWorkbook(workbook, fallbackName = "") {
     const recognizedSheets = [];
     const ignored = [];
     const hidden = [];
-    const fallbackKey = classifySheetName(fallbackName);
     const sheetMetadata = workbook.Workbook?.Sheets || [];
 
     workbook.SheetNames.forEach((sheetName, sheetIndex) => {
@@ -530,19 +544,17 @@ function processWorkbook(workbook, fallbackName = "") {
             return;
         }
 
-        let key = classifySheetName(sheetName);
-
-        if (!key) {
-            key = detectSheetKeyByContent(matrix);
-        }
-
-        if (!key && fallbackKey) {
-            key = fallbackKey;
-        }
+        /*
+         * Importação estrita: somente nomes de abas autorizados.
+         * Não tenta adivinhar pelo conteúdo e não usa o nome do arquivo
+         * como atalho. Isso impede que abas auxiliares, como VJ, EC,
+         * LISTA ou RESUMO ENTRADA E SAIDA, sejam importadas por engano.
+         */
+        const key = classifySheetName(sheetName);
 
         if (!key) {
             ignored.push(sheetName);
-            console.warn(`Aba não reconhecida: ${sheetName}`);
+            console.info(`Aba ignorada por nome: ${sheetName}`);
             return;
         }
 
