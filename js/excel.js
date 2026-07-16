@@ -2263,12 +2263,96 @@ async function refreshImportedLocalFiles(options = {}) {
  * tenha sido recarregada e importedData esteja vazio, busca os bytes
  * no IndexedDB e reconstrói as matrizes automaticamente.
  */
+
+function clearPanelsForEmptyFilter() {
+    const dailyKeys = [
+        "campo",
+        "abastecimento",
+        "diario"
+    ];
+
+    state.days = [];
+
+    dailyKeys.forEach(key => {
+        state.data[key] = {};
+
+        state.farms.forEach((farm, farmIndex) => {
+            state.data[key][farmIndex] = {};
+        });
+
+        if (
+            state.dailyDataReady &&
+            typeof state.dailyDataReady === "object"
+        ) {
+            state.dailyDataReady[key] = false;
+        }
+    });
+
+    state.monthly = {};
+
+    state.farms.forEach((farm, farmIndex) => {
+        state.monthly[farmIndex] = "blank";
+    });
+
+    state.diverg = {};
+
+    state.farms.forEach((farm, farmIndex) => {
+        state.diverg[farmIndex] = {
+            nd: "",
+            ns: "",
+            md: "",
+            ms: ""
+        };
+    });
+
+    const referenceDate =
+        typeof getMonthlyReferenceDate === "function"
+            ? getMonthlyReferenceDate()
+            : new Date();
+
+    if (
+        typeof formatMonthlyLabel === "function"
+    ) {
+        state.monthLabel =
+            formatMonthlyLabel(referenceDate);
+    }
+
+    ensureData();
+}
+
 async function reapplyImportedDataForCurrentFilter(options = {}) {
     const {
         silent = true,
         save = true
     } = options;
 
+    /*
+     * Sempre reconstrói importedData usando TODOS os arquivos locais
+     * guardados no IndexedDB.
+     *
+     * Antes, o código reutilizava importedData quando encontrava pelo
+     * menos uma planilha carregada. Isso falhava quando uma importação
+     * mais recente continha apenas Mensal, Campo ou outro painel:
+     * o Diário deixava de existir em importedData e não voltava ao
+     * retornar para o período anterior.
+     */
+    const localFiles =
+        typeof getImportedLocalFiles === "function"
+            ? getImportedLocalFiles()
+            : [];
+
+    if (localFiles.length) {
+        return refreshImportedLocalFiles({
+            silent,
+            save
+        });
+    }
+
+    /*
+     * Compatibilidade com dados vindos exclusivamente de URL:
+     * se não há arquivos locais, reaplica as matrizes que já estiverem
+     * disponíveis em importedData.
+     */
     if (EXCEL_PANEL_KEYS.some(hasImportedData)) {
         const result = preencherSistema({
             silent: true
@@ -2287,10 +2371,26 @@ async function reapplyImportedDataForCurrentFilter(options = {}) {
         return result;
     }
 
-    return refreshImportedLocalFiles({
-        silent,
-        save
-    });
+    /*
+     * Não existe nenhuma fonte local nem matriz disponível.
+     * Limpa os painéis para o período atual não conservar dados antigos.
+     */
+    clearPanelsForEmptyFilter();
+
+    if (typeof renderAll === "function") {
+        renderAll();
+    }
+
+    if (save && typeof saveState === "function") {
+        saveState();
+    }
+
+    return {
+        found: [],
+        failed: [],
+        unmatched: [],
+        noDatesInFilter: true
+    };
 }
 
 /*
