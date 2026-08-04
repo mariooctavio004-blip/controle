@@ -3,6 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente Financeiro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="chat-app">
+        <section class="chat-panel" aria-label="Chat financeiro">
+            <header class="chat-header">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>Assistente Financeiro</strong>
+                    <small>Informe gastos feitos, gastos previstos, renda e investimentos.</small>
+                </div>
+                <button id="clearChatBtn" class="ghost-button" type="button">Limpar conversa</button>
+            </header>
+
+            <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+
+            <form id="chatForm" class="chat-composer">
+                <label class="sr-only" for="chatInput">Mensagem para o assistente financeiro</label>
+                <textarea
+                    id="chatInput"
+                    name="message"
+                    rows="2"
+                    placeholder="Ex.: gastei 120 no mercado hoje; ainda vou gastar 900 de aluguel; recebi 5000; investi 300"
+                    required
+                ></textarea>
+                <button type="submit">Enviar</button>
+            </form>
+        </section>
+
+        <aside class="summary-panel" aria-label="Resumo financeiro">
+            <div class="summary-card highlight">
+                <span>Saldo projetado</span>
+                <strong id="projectedBalance">R$ 0,00</strong>
+                <small>Renda menos gastos feitos, gastos previstos e investimentos informados.</small>
+            </div>
+
+            <div class="summary-grid">
+                <article class="summary-card">
+                    <span>Renda informada</span>
+                    <strong id="incomeTotal">R$ 0,00</strong>
+                </article>
+                <article class="summary-card danger">
+                    <span>Já gastei</span>
+                    <strong id="spentTotal">R$ 0,00</strong>
+                </article>
+                <article class="summary-card warning">
+                    <span>Ainda vou gastar</span>
+                    <strong id="plannedTotal">R$ 0,00</strong>
+                </article>
+                <article class="summary-card success">
+                    <span>Investi / vou investir</span>
+                    <strong id="investmentTotal">R$ 0,00</strong>
+                </article>
+            </div>
+
+            <section class="insight-box">
+                <h2>Resumo do assistente</h2>
+                <ul id="insightList"></ul>
+            </section>
+
+            <section class="entries-box">
+                <div class="entries-title">
+                    <h2>Lançamentos entendidos</h2>
+                    <span id="entryCount">0 itens</span>
+                </div>
+                <ul id="entryList"></ul>
+            </section>
+        </aside>
+    </main>
+
+    <script src="js/finance-agent.js"></script>
     <title>Pierre — Agente de Finanças</title>
     <link rel="stylesheet" href="style.css">
 </head>
