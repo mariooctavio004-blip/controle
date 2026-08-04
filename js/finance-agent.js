@@ -1,5 +1,6 @@
 /* ============================================================
    FINANCE-AGENT.JS
+   Pierre: agente local para controle de gastos e investimentos.
    Agente local para controle de gastos, orçamento e investimentos.
 ============================================================ */
 
@@ -121,6 +122,23 @@ function getFinanceAgentAdvice(totals) {
     const advice = [];
 
     if (budgetUsage >= 1) {
+        advice.push("Pierre alerta: o limite de gastos passou do combinado. Pause compras não essenciais e revise a maior categoria.");
+    } else if (budgetUsage >= 0.8) {
+        advice.push("Pierre percebeu que mais de 80% do limite já foi usado. Priorize contas obrigatórias e adie gastos variáveis.");
+    } else {
+        advice.push("Pierre vê um orçamento saudável. Continue registrando tudo para manter a previsão confiável.");
+    }
+
+    if (investmentProgress < 0.5) {
+        advice.push("Pierre recomenda antecipar o aporte: a meta de investimento ainda está abaixo do ritmo ideal.");
+    } else {
+        advice.push("Pierre gostou do ritmo de investimento. Mantenha a constância e diversifique conforme seu perfil de risco.");
+    }
+
+    if (balance < 0) {
+        advice.push("Pierre calculou saldo negativo. Corte despesas recorrentes antes de assumir novos compromissos.");
+    } else if (topCategory) {
+        advice.push(`Pierre encontrou o maior foco de economia: ${topCategory[0]}, com ${formatCurrency(topCategory[1])} em gastos.`);
         advice.push("Seu orçamento de gastos foi ultrapassado. Trave compras não essenciais até revisar as categorias mais caras.");
     } else if (budgetUsage >= 0.8) {
         advice.push("Você já usou mais de 80% do orçamento. Priorize contas obrigatórias e adie gastos variáveis.");
@@ -163,6 +181,12 @@ function renderFinanceAgent() {
     document.getElementById("financeInvestmentProgress").style.width = `${investmentProgress}%`;
     document.getElementById("financeBudgetText").textContent = `${budgetUsage.toFixed(0)}% do orçamento usado`;
     document.getElementById("financeInvestmentText").textContent = `${investmentProgress.toFixed(0)}% da meta investida`;
+
+    const mainAdvice = document.getElementById("mainAdvice");
+    if (mainAdvice) {
+        mainAdvice.textContent = getFinanceAgentAdvice(totals)[0] ||
+            "Registre seus valores para eu acompanhar orçamento, saldo e aportes.";
+    }
 
     const adviceList = document.getElementById("financeAdviceList");
     adviceList.innerHTML = getFinanceAgentAdvice(totals)
