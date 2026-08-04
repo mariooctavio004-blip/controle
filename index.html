@@ -1,1067 +1,165 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Status de Envio - Fazendas</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pierre — Agente de Finanças</title>
     <link rel="stylesheet" href="style.css">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
-
 <body>
+    <main class="app-shell">
+        <header class="hero">
+            <nav class="topbar" aria-label="Navegação principal">
+                <a class="brand" href="#top" aria-label="Pierre, início">
+                    <span class="brand-mark">P</span>
+                    <span>Pierre</span>
+                </a>
+                <div class="nav-actions">
+                    <a href="#lancamentos">Lançamentos</a>
+                    <a href="#plano">Plano</a>
+                    <a class="nav-cta" href="#agente">Abrir agente</a>
+                </div>
+            </nav>
 
-<div class="app">
-
-    <!-- =====================================================
-         CABEÇALHO
-    ====================================================== -->
-
-    <header class="toolbar">
-
-        <div class="toolbar-left">
-
-            <div class="title-group">
-
-                <h1>STATUS DE ENVIO DOS CONTROLES</h1>
-
-                <span class="toolbar-subtitle">
-                    Painel de acompanhamento das fazendas
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="toolbar-center">
-
-            <div class="connection-card">
-
-                <div class="connection-header">
-
-                    <span class="connection-dot"></span>
-
-                    <span id="connectionIndicator">
-                        Nenhuma planilha conectada
-                    </span>
-
+            <section id="top" class="hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Seu copiloto financeiro pessoal</p>
+                    <h1>Pierre organiza seus gastos e mostra o melhor próximo passo.</h1>
+                    <p>
+                        Controle entradas, despesas e investimentos em uma experiência criada
+                        do zero para finanças pessoais — sem cara de painel antigo e sem depender
+                        de planilhas externas.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="button primary" href="#lancamentos">Registrar gasto</a>
+                        <a class="button secondary" href="#agente">Ver recomendações</a>
+                    </div>
                 </div>
 
-                <div
-                    id="currentWorkbook"
-                    class="connection-list"
-                >
-                    Selecione uma planilha
-                </div>
+                <aside class="assistant-card" id="agente" aria-labelledby="assistantTitle">
+                    <span class="assistant-avatar">🤖</span>
+                    <div>
+                        <p class="assistant-label">Pierre IA</p>
+                        <h2 id="assistantTitle">Análise instantânea</h2>
+                        <p id="mainAdvice">
+                            Registre seus valores para eu acompanhar orçamento, saldo e aportes.
+                        </p>
+                    </div>
+                </aside>
+            </section>
+        </header>
 
-            </div>
-
-        </div>
-
-
-        <div class="toolbar-right">
-
-            <button
-                id="openWorkbookModal"
-                class="btn-primary"
-                type="button"
-            >
-                📂 Planilhas
-            </button>
-
-            <button
-                id="processBtn"
-                class="btn-secondary"
-                type="button"
-            >
-                🔄 Atualizar
-            </button>
-
-            <button
-                id="exportBtn"
-                class="btn-secondary"
-                type="button"
-            >
-                📸 Exportar
-            </button>
-
-
-            <div class="config-dropdown">
-
-                <button
-                    id="configMenuBtn"
-                    class="btn-config"
-                    type="button"
-                    aria-label="Abrir configurações"
-                >
-                    ⚙
-                </button>
-
-                <div
-                    id="configMenu"
-                    class="config-menu"
-                >
-
-                    <button
-                        id="toggleConfigBtn"
-                        type="button"
-                    >
-                        👁 Mostrar / Ocultar edição
-                    </button>
-
-                    <button
-                        id="resetBtn"
-                        type="button"
-                    >
-                        🗑 Limpar todos os dados
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </header>
-
-
-    <!-- =====================================================
-         FILTROS
-    ====================================================== -->
-
-    <section class="filter-bar">
-
-        <div class="filter-card">
-
-            <label for="reportStartDate">
-                Data Inicial
-            </label>
-
-            <input
-                type="date"
-                id="reportStartDate"
-                class="date-input"
-            >
-
-        </div>
-
-
-        <div class="filter-card">
-
-            <label for="reportEndDate">
-                Data Final
-            </label>
-
-            <input
-                type="date"
-                id="reportEndDate"
-                class="date-input"
-            >
-
-        </div>
-
-
-        <button
-            id="todayBtn"
-            class="btn-secondary"
-            type="button"
-        >
-            📅 Hoje
-        </button>
-
-
-        <button
-            id="last7Btn"
-            class="btn-secondary"
-            type="button"
-        >
-            📆 Últimos 7 dias
-        </button>
-
-    </section>
-
-
-    <!-- =====================================================
-     MODAL DAS PLANILHAS
-====================================================== -->
-
-<div
-    id="workbookModal"
-    class="modal"
-    style="display: none;"
-    aria-hidden="true"
->
-
-    <div class="modal-content workbook-modal-content">
-
-        <div class="modal-header">
-
-            <div>
-
-                <h2>Planilhas do sistema</h2>
-
-                <p class="modal-subtitle">
-                    Conecte por URL do SharePoint ou importe arquivos do computador.
-                </p>
-
-            </div>
-
-            <button
-                id="closeWorkbookModal"
-                class="modal-close"
-                type="button"
-                aria-label="Fechar"
-            >
-                ×
-            </button>
-
-        </div>
-
-
-        <!-- =================================================
-             IMPORTAÇÃO PELO COMPUTADOR
-        ================================================== -->
-
-        <section class="local-import-card">
-
-            <div class="local-import-info">
-
-                <span class="local-import-icon">📁</span>
-
-                <div>
-
-                    <strong>Importar arquivo do computador</strong>
-
-                    <small>
-                        Selecione uma ou várias planilhas Excel.
-                        Não é necessário ter o Excel instalado.
-                    </small>
-
-                </div>
-
-            </div>
-
-            <label
-                for="excelFiles"
-                class="btn-secondary local-import-button"
-            >
-                📎 Escolher arquivos
-            </label>
-
-            <input
-                type="file"
-                id="excelFiles"
-                accept=".xlsx,.xls"
-                multiple
-                hidden
-            >
-
+        <section class="metrics" aria-label="Resumo financeiro">
+            <article class="metric-card income">
+                <span>Renda do mês</span>
+                <strong id="financeIncomeValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card expense">
+                <span>Gastos</span>
+                <strong id="financeExpenseValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card investment">
+                <span>Investimentos</span>
+                <strong id="financeInvestmentValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card balance">
+                <span>Saldo livre</span>
+                <strong id="financeBalanceValue">R$ 0,00</strong>
+            </article>
         </section>
 
-
-        <div class="modal-separator">
-
-            <span>OU CONECTE PELAS URLs</span>
-
-        </div>
-
-
-        <!-- =================================================
-             PLANILHAS POR URL
-        ================================================== -->
-
-        <div
-            id="workbookList"
-            class="workbook-list"
-        >
-
-            <!-- Operações em Campo -->
-
-            <div
-                class="workbook-card"
-                data-workbook="campo"
-            >
-
-                <div class="workbook-card-header">
-
-                    <div class="workbook-title">
-
-                        <span class="workbook-icon">🚜</span>
-
-                        <div>
-
-                            <strong>Operações em Campo</strong>
-
-                            <small>
-                                Controle diário das operações
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    <span
-                        id="campoStatus"
-                        class="workbook-status offline"
-                    >
-                        Não conectado
-                    </span>
-
+        <section class="workspace">
+            <div class="panel" id="lancamentos">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Lançamentos</p>
+                    <h2>Adicione renda, gasto ou investimento</h2>
                 </div>
 
-                <label for="campoUrl">
-                    URL da planilha
-                </label>
-
-                <div class="workbook-url-row">
-
-                    <input
-                        type="url"
-                        id="campoUrl"
-                        class="workbook-url-input"
-                        placeholder="Cole a URL de Operações em Campo"
-                        autocomplete="off"
-                    >
-
-                    <button
-                        type="button"
-                        class="btn-primary connect-workbook-btn"
-                        data-id="campo"
-                    >
-                        Conectar
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-danger remove-workbook-btn"
-                        data-id="campo"
-                    >
-                        Remover
-                    </button>
-
-                </div>
-
-                <small
-                    id="campoLastSync"
-                    class="workbook-last-sync"
-                >
-                    Nunca sincronizada
-                </small>
-
-            </div>
-
-
-            <!-- Abastecimento -->
-
-            <div
-                class="workbook-card"
-                data-workbook="abastecimento"
-            >
-
-                <div class="workbook-card-header">
-
-                    <div class="workbook-title">
-
-                        <span class="workbook-icon">⛽</span>
-
-                        <div>
-
-                            <strong>Abastecimento</strong>
-
-                            <small>
-                                Controle diário de abastecimento
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    <span
-                        id="abastecimentoStatus"
-                        class="workbook-status offline"
-                    >
-                        Não conectado
-                    </span>
-
-                </div>
-
-                <label for="abastecimentoUrl">
-                    URL da planilha
-                </label>
-
-                <div class="workbook-url-row">
-
-                    <input
-                        type="url"
-                        id="abastecimentoUrl"
-                        class="workbook-url-input"
-                        placeholder="Cole a URL de Abastecimento"
-                        autocomplete="off"
-                    >
-
-                    <button
-                        type="button"
-                        class="btn-primary connect-workbook-btn"
-                        data-id="abastecimento"
-                    >
-                        Conectar
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-danger remove-workbook-btn"
-                        data-id="abastecimento"
-                    >
-                        Remover
-                    </button>
-
-                </div>
-
-                <small
-                    id="abastecimentoLastSync"
-                    class="workbook-last-sync"
-                >
-                    Nunca sincronizada
-                </small>
-
-            </div>
-
-
-            <!-- Diário de Campo -->
-
-            <div
-                class="workbook-card"
-                data-workbook="diario"
-            >
-
-                <div class="workbook-card-header">
-
-                    <div class="workbook-title">
-
-                        <span class="workbook-icon">📋</span>
-
-                        <div>
-
-                            <strong>Diário de Campo</strong>
-
-                            <small>
-                                Manejo e rebanho
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    <span
-                        id="diarioStatus"
-                        class="workbook-status offline"
-                    >
-                        Não conectado
-                    </span>
-
-                </div>
-
-                <label for="diarioUrl">
-                    URL da planilha
-                </label>
-
-                <div class="workbook-url-row">
-
-                    <input
-                        type="url"
-                        id="diarioUrl"
-                        class="workbook-url-input"
-                        placeholder="Cole a URL do Diário de Campo"
-                        autocomplete="off"
-                    >
-
-                    <button
-                        type="button"
-                        class="btn-primary connect-workbook-btn"
-                        data-id="diario"
-                    >
-                        Conectar
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-danger remove-workbook-btn"
-                        data-id="diario"
-                    >
-                        Remover
-                    </button>
-
-                </div>
-
-                <small
-                    id="diarioLastSync"
-                    class="workbook-last-sync"
-                >
-                    Nunca sincronizada
-                </small>
-
-            </div>
-
-
-            <!-- Mapa Mensal -->
-
-            <div
-                class="workbook-card"
-                data-workbook="mensal"
-            >
-
-                <div class="workbook-card-header">
-
-                    <div class="workbook-title">
-
-                        <span class="workbook-icon">🐄</span>
-
-                        <div>
-
-                            <strong>Mapa Mensal do Rebanho</strong>
-
-                            <small>
-                                Fechamento mensal
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    <span
-                        id="mensalStatus"
-                        class="workbook-status offline"
-                    >
-                        Não conectado
-                    </span>
-
-                </div>
-
-                <label for="mensalUrl">
-                    URL da planilha
-                </label>
-
-                <div class="workbook-url-row">
-
-                    <input
-                        type="url"
-                        id="mensalUrl"
-                        class="workbook-url-input"
-                        placeholder="Cole a URL do Mapa Mensal"
-                        autocomplete="off"
-                    >
-
-                    <button
-                        type="button"
-                        class="btn-primary connect-workbook-btn"
-                        data-id="mensal"
-                    >
-                        Conectar
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-danger remove-workbook-btn"
-                        data-id="mensal"
-                    >
-                        Remover
-                    </button>
-
-                </div>
-
-                <small
-                    id="mensalLastSync"
-                    class="workbook-last-sync"
-                >
-                    Nunca sincronizada
-                </small>
-
-            </div>
-
-
-            <!-- Divergências -->
-
-            <div
-                class="workbook-card"
-                data-workbook="divergencias"
-            >
-
-                <div class="workbook-card-header">
-
-                    <div class="workbook-title">
-
-                        <span class="workbook-icon">⚖️</span>
-
-                        <div>
-
-                            <strong>
-                                Divergências Diário × Sistema
-                            </strong>
-
-                            <small>
-                                Comparação dos dados
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    <span
-                        id="divergenciasStatus"
-                        class="workbook-status offline"
-                    >
-                        Não conectado
-                    </span>
-
-                </div>
-
-                <label for="divergenciasUrl">
-                    URL da planilha
-                </label>
-
-                <div class="workbook-url-row">
-
-                    <input
-                        type="url"
-                        id="divergenciasUrl"
-                        class="workbook-url-input"
-                        placeholder="Cole a URL de Divergências"
-                        autocomplete="off"
-                    >
-
-                    <button
-                        type="button"
-                        class="btn-primary connect-workbook-btn"
-                        data-id="divergencias"
-                    >
-                        Conectar
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-danger remove-workbook-btn"
-                        data-id="divergencias"
-                    >
-                        Remover
-                    </button>
-
-                </div>
-
-                <small
-                    id="divergenciasLastSync"
-                    class="workbook-last-sync"
-                >
-                    Nunca sincronizada
-                </small>
-
-            </div>
-
-        </div>
-
-
-        <div class="modal-actions">
-
-            <button
-                id="syncAllWorkbooksBtn"
-                class="btn-primary"
-                type="button"
-            >
-                🔄 Sincronizar todas
-            </button>
-
-            <button
-                id="closeWorkbookModalBottom"
-                class="btn-secondary"
-                type="button"
-            >
-                Fechar
-            </button>
-
-            <button
-                id="disconnectWorkbook"
-                type="button"
-                style="display: none;"
-            >
-                Remover vínculo
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-    <!-- =====================================================
-         CONFIRMAÇÃO DE LIMPEZA
-    ====================================================== -->
-
-    <div
-        id="confirmOverlay"
-        class="confirm-overlay"
-        style="display: none;"
-    >
-
-        <div class="confirm-box">
-
-            <h3>Limpar dados</h3>
-
-            <p>
-                Todos os dados importados e editados serão apagados.
-                Esta ação não poderá ser desfeita.
-            </p>
-
-            <div class="confirm-actions">
-
-                <button
-                    id="confirmCancel"
-                    class="btn-secondary"
-                    type="button"
-                >
-                    Cancelar
-                </button>
-
-                <button
-                    id="confirmOk"
-                    class="btn-danger"
-                    type="button"
-                >
-                    🗑 Limpar tudo
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         CONFIGURAÇÕES
-    ====================================================== -->
-
-    <section
-        id="configPanel"
-        class="panel-config"
-    >
-
-        <div class="config-panel-header">
-
-            <div>
-
-                <h2>⚙ Configurações do Relatório</h2>
-
-                <p>
-                    Personalize as informações exibidas no relatório.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="config-grid">
-
-            <article class="config-card config-card-general">
-
-                <div class="config-card-title">
-
-                    <span>📝</span>
-
-                    <div>
-
-                        <h3>Informações gerais</h3>
-
-                        <p>
-                            Título, período e mensagem do relatório.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div
-                    class="config-row"
-                    style="display: none;"
-                >
-
-                    <label for="companyName">
-                        Empresa
+                <form id="financeTransactionForm" class="finance-form">
+                    <label>
+                        Descrição
+                        <input name="description" type="text" placeholder="Ex.: Aluguel, mercado, salário" required>
                     </label>
-
-                    <input
-                        id="companyName"
-                        type="text"
-                    >
-
-                </div>
-
-
-                <div class="config-row">
-
-                    <label for="reportTitle">
-                        Título
+                    <label>
+                        Categoria
+                        <input name="category" type="text" placeholder="Ex.: Moradia, alimentação" required>
                     </label>
-
-                    <input
-                        id="reportTitle"
-                        type="text"
-                        placeholder="Status de Envio dos Controles"
-                    >
-
-                </div>
-
-
-                <div class="config-row">
-
-                    <label for="periodLabel">
-                        Período
+                    <label>
+                        Tipo
+                        <select name="type">
+                            <option value="expense">Despesa</option>
+                            <option value="income">Renda</option>
+                            <option value="investment">Investimento</option>
+                        </select>
                     </label>
-
-                    <input
-                        id="periodLabel"
-                        type="text"
-                        placeholder="01/07 a 04/07"
-                    >
-
-                </div>
-
-
-                <div class="config-row">
-
-                    <label for="bannerText">
-                        Mensagem superior
+                    <label>
+                        Valor
+                        <input name="amount" type="text" inputmode="decimal" placeholder="Ex.: 250,00" required>
                     </label>
-
-                    <input
-                        id="bannerText"
-                        type="text"
-                        placeholder="Digite a mensagem exibida no relatório"
-                    >
-
-                </div>
-
-            </article>
-
-
-            <article class="config-card">
-
-                <div class="config-card-title">
-
-                    <span>📊</span>
-
-                    <div>
-
-                        <h3>Painéis exibidos</h3>
-
-                        <p>
-                            Selecione até quatro painéis.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div
-                    id="panelSelectList"
-                    class="panel-select-list"
-                ></div>
-
-                <div
-                    id="selectWarning"
-                    class="select-warning"
-                    style="display: none;"
-                >
-                    Você pode selecionar no máximo quatro painéis.
-                </div>
-
-            </article>
-
-
-            <article class="config-card">
-
-                <div class="config-card-title">
-
-                    <span>🚜</span>
-
-                    <div>
-
-                        <h3>Fazendas monitoradas</h3>
-
-                        <p>
-                            Adicione, edite ou remova fazendas.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div
-                    id="farmList"
-                    class="farm-list"
-                ></div>
-
-                <button
-                    id="addFarmBtn"
-                    class="add-chip"
-                    type="button"
-                >
-                    + Adicionar fazenda
-                </button>
-
-            </article>
-
-
-            <article class="config-card">
-
-                <div class="config-card-title">
-
-                    <span>📅</span>
-
-                    <div>
-
-                        <h3>Dias do relatório</h3>
-
-                        <p>
-                            Gerencie as colunas dos painéis diários.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div
-                    id="dayList"
-                    class="day-list"
-                ></div>
-
-                <button
-                    id="addDayBtn"
-                    class="add-chip"
-                    type="button"
-                >
-                    <div class="day-actions">
-
-    <div id="dayList" class="day-list"></div>
-
-<div class="day-actions">
-
-    <button
-        id="addDayBtn"
-        class="add-chip"
-        type="button"
-    >
-        + Adicionar dia
-    </button>
-
-    <button
-        id="enableManualEntryBtn"
-        class="add-chip manual-entry-btn"
-        type="button"
-    >
-        ✏️ Preencher manualmente
-    </button>
-
-</div>
-    <!-- =====================================================
-         RELATÓRIO
-    ====================================================== -->
-
-    <section id="report">
-
-        <div class="rep-header">
-
-            <div class="rep-header-top">
-
-                <div class="rep-header-content">
-
-                    <p
-                        id="titleDisplay"
-                        class="rep-title"
-                    ></p>
-
-                    <div class="rep-period-box">
-
-    <span class="rep-period-label">
-        📅 PERÍODO:
-    </span>
-
-    <strong id="periodDisplay"></strong>
-
-</div>
-
-                </div>
-
-
-                <div class="rep-logo">
-
-                    <img
-                        src="logo.png"
-                        id="logoImg"
-                        class="rep-logo-img"
-                        alt="Logo Nelore Cometa"
-                    >
-
-                </div>
-
+                    <label>
+                        Data
+                        <input id="financeDate" name="date" type="date" required>
+                    </label>
+                    <button class="button primary full" type="submit">Adicionar no Pierre</button>
+                </form>
             </div>
 
-        </div>
+            <div class="panel" id="plano">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Plano mensal</p>
+                    <h2>Defina seus limites</h2>
+                </div>
 
+                <form id="financeSettingsForm" class="finance-form compact">
+                    <label>
+                        Renda prevista
+                        <input id="financeMonthlyIncome" name="monthlyIncome" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Limite para gastar
+                        <input id="financeMonthlyBudget" name="monthlyBudget" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Meta para investir
+                        <input id="financeInvestmentGoal" name="investmentGoal" type="text" inputmode="decimal">
+                    </label>
+                    <button class="button secondary full" type="submit">Salvar plano</button>
+                </form>
 
-        <div
-            id="bannerDisplay"
-            class="rep-banner"
-        ></div>
+                <div class="progress-stack">
+                    <div>
+                        <div class="progress-label">
+                            <span id="financeBudgetText">0% do limite usado</span>
+                        </div>
+                        <div class="progress danger"><i id="financeBudgetProgress"></i></div>
+                    </div>
+                    <div>
+                        <div class="progress-label">
+                            <span id="financeInvestmentText">0% da meta investida</span>
+                        </div>
+                        <div class="progress success"><i id="financeInvestmentProgress"></i></div>
+                    </div>
+                </div>
+            </div>
 
+            <div class="panel advice-panel">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Recomendações</p>
+                    <h2>O que Pierre faria agora</h2>
+                </div>
+                <ul id="financeAdviceList" class="advice-list"></ul>
+            </div>
 
-        <div
-            id="reportGrid"
-            class="rep-grid"
-        ></div>
+            <div class="panel transactions-panel">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Histórico</p>
+                    <h2>Últimos movimentos</h2>
+                </div>
+                <ul id="financeTransactionList" class="transaction-list"></ul>
+            </div>
+        </section>
+    </main>
 
-
-        <footer class="rep-bottombar">
-
-            DISCIPLINA NA INFORMAÇÃO
-            <span>•</span>
-            EXCELÊNCIA NA GESTÃO
-            <span>•</span>
-            PRAZO DE ENVIO DIÁRIO
-
-        </footer>
-
-    </section>
-
-</div>
-
-
-<!-- =====================================================
-     ARQUIVOS JAVASCRIPT
-===================================================== -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script src="js/config.js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/state.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/excel.js"></script>
-<script src="js/sharepoint.js"></script>
-<script src="js/filters.js"></script>
-<script src="js/report.js"></script>
-<script src="js/render.js"></script>
-<script src="js/events.js"></script>
-<script src="js/app.js"></script>
-
+    <script src="js/finance-agent.js"></script>
 </body>
 </html>

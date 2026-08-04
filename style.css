@@ -1,30 +1,18 @@
 :root {
-    --navy: #102a56;
-    --navy-dark: #091b3a;
-    --navy-soft: #edf3ff;
-    --blue: #2563eb;
-    --blue-dark: #1d4ed8;
-    --gold: #e9c98f;
-    --gold-soft: #fbf3e4;
-    --green: #159447;
-    --green-soft: #eaf7ef;
-    --red: #d9363e;
-    --red-soft: #fff0f1;
-    --orange: #c77700;
-    --orange-soft: #fff6e5;
-    --bg: #eef3f8;
-    --card: #ffffff;
-    --surface: #f8fafc;
-    --border: #dce3ec;
-    --border-strong: #c8d2df;
-    --text: #162033;
+    --bg: #08111f;
+    --panel: #ffffff;
+    --panel-soft: #f6f8fb;
+    --ink: #101828;
     --muted: #667085;
-    --shadow-sm: 0 4px 14px rgba(15, 42, 92, 0.06);
-    --shadow-md: 0 12px 32px rgba(15, 42, 92, 0.10);
-    --shadow-lg: 0 24px 70px rgba(15, 42, 92, 0.18);
-    --radius-md: 12px;
-    --radius-lg: 18px;
-    --transition: 180ms ease;
+    --line: #e4e7ec;
+    --purple: #7c3aed;
+    --purple-dark: #5b21b6;
+    --cyan: #06b6d4;
+    --green: #16a34a;
+    --red: #dc2626;
+    --amber: #f59e0b;
+    --shadow: 0 24px 70px rgba(8, 17, 31, 0.22);
+    --radius: 24px;
 }
 
 * { box-sizing: border-box; }
@@ -32,1458 +20,326 @@ html { scroll-behavior: smooth; }
 body {
     margin: 0;
     min-width: 320px;
-    font-family: "Segoe UI", Inter, Arial, sans-serif;
-    color: var(--text);
-    background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.07), transparent 28%), var(--bg);
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background:
+        radial-gradient(circle at 20% 0%, rgba(124, 58, 237, 0.45), transparent 34%),
+        radial-gradient(circle at 85% 12%, rgba(6, 182, 212, 0.28), transparent 28%),
+        linear-gradient(180deg, var(--bg) 0%, #111827 42%, #eef2ff 42%, #eef2ff 100%);
 }
-body.modal-open { overflow: hidden; }
-button, input { font: inherit; }
+
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
 button { border: 0; cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important; }
-.app {
-    width: min(1450px, calc(100% - 32px));
+
+.app-shell {
+    width: min(1180px, calc(100% - 32px));
     margin: 0 auto;
-    padding: 24px 0 72px;
-    position: relative;
+    padding: 20px 0 64px;
 }
 
-.btn-primary, .btn-secondary, .btn-danger, .btn-config, .add-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    border-radius: 10px;
-    padding: 0 16px;
-    font-size: 13px;
-    font-weight: 700;
-    transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
-}
-.btn-primary { color: #fff; background: var(--navy); box-shadow: 0 6px 16px rgba(15, 42, 92, 0.18); }
-.btn-primary:hover { background: var(--navy-dark); transform: translateY(-1px); }
-.btn-secondary { color: var(--text); background: #fff; border: 1px solid var(--border); }
-.btn-secondary:hover { background: #f5f7fb; border-color: var(--border-strong); transform: translateY(-1px); }
-.btn-danger { color: var(--red); background: var(--red-soft); border: 1px solid #f4c9cc; }
-.btn-danger:hover { background: #ffe4e7; transform: translateY(-1px); }
-.btn-config { width: 42px; min-width: 42px; padding: 0; color: var(--navy); background: var(--navy-soft); border: 1px solid #d8e3fb; font-size: 18px; }
-.btn-config:hover { background: #dfe9fb; transform: translateY(-1px); }
-
-.toolbar {
-    position: sticky;
-    top: 12px;
-    z-index: 100;
-    display: grid;
-    grid-template-columns: minmax(270px, 1.2fr) minmax(250px, 0.9fr) auto;
-    align-items: center;
-    gap: 24px;
-    margin-bottom: 16px;
-    padding: 20px 22px;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(220, 227, 236, 0.95);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    backdrop-filter: blur(14px);
-}
-.toolbar-left, .toolbar-center, .toolbar-right { min-width: 0; }
-.title-group h1 { margin: 0; color: var(--navy); font-size: clamp(20px, 2vw, 30px); line-height: 1.08; letter-spacing: -0.02em; }
-.toolbar-subtitle { display: block; margin-top: 7px; color: var(--muted); font-size: 13px; }
-.toolbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-.connection-card { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.connection-header { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 800; color: var(--navy); }
-.connection-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(217, 54, 62, 0.12); }
-.connection-list { display: grid; gap: 5px; margin-top: 7px; color: var(--muted); font-size: 12px; max-height: 100px; overflow: auto; }
-.connected-item { display: flex; align-items: flex-start; gap: 7px; }
-.connected-item strong, .connected-item small { display: block; }
-.connected-item strong { color: var(--text); font-size: 12px; }
-.connected-item small { margin-top: 2px; color: var(--muted); font-size: 11px; }
-
-.config-dropdown { position: relative; }
-.config-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 1200; display: none; width: 250px; overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); }
-.config-menu.show { display: flex; flex-direction: column; }
-.config-menu button { padding: 14px 16px; color: var(--text); background: #fff; text-align: left; font-size: 13px; font-weight: 700; }
-.config-menu button + button { border-top: 1px solid var(--border); }
-.config-menu button:hover { background: #f6f8fb; }
-
-.filter-bar { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; padding: 14px 16px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); }
-.filter-card { display: flex; flex-direction: column; gap: 6px; }
-.filter-card label { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
-.date-input, .filter-card input[type="date"] { min-width: 170px; height: 42px; padding: 0 12px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 650; transition: border-color var(--transition), box-shadow var(--transition); }
-.date-input:focus, .filter-card input[type="date"]:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
-
-.panel-config { margin-bottom: 18px; padding: 18px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
-.panel-config.is-hidden { display: none; }
-.config-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-.config-panel-header h2 { margin: 0; color: var(--navy); font-size: 18px; }
-.config-panel-header p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
-.config-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.config-card { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
-.config-card-title { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
-.config-card-title > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--navy-soft); }
-.config-card-title h3 { margin: 0; color: var(--navy); font-size: 14px; }
-.config-card-title p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
-.config-row { display: grid; gap: 6px; margin-bottom: 12px; }
-.config-row:last-child { margin-bottom: 0; }
-.config-row label { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
-.config-row input[type="text"] { width: 100%; min-height: 42px; padding: 0 12px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
-.config-row input[type="text"]:focus, .chip input:focus, .workbook-url-input:focus, .num-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10); }
-.panel-select-list { display: grid; gap: 8px; }
-.panel-select-item { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 44px; padding: 9px 11px; background: #fff; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color var(--transition), background var(--transition); }
-.panel-select-item:hover { border-color: var(--border-strong); }
-.panel-select-item.checked { background: var(--navy-soft); border-color: #b9caec; }
-.panel-select-item input { accent-color: var(--navy); }
-.order-badge { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; color: #fff; background: var(--navy); font-size: 11px; font-weight: 800; }
-.order-badge.empty { color: transparent; background: #d8dee8; }
-.panel-select-item .name { min-width: 0; font-size: 12px; font-weight: 800; }
-.slot-hint { color: var(--muted); font-size: 10px; white-space: nowrap; }
-.select-warning { margin-top: 8px; color: var(--red); font-size: 11px; font-weight: 700; }
-.farm-list, .day-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.chip { display: flex; align-items: center; gap: 4px; max-width: 100%; padding: 5px 5px 5px 10px; background: #fff; border: 1px solid var(--border); border-radius: 999px; }
-.chip input { width: 130px; max-width: 100%; padding: 3px 4px; border: 0; background: transparent; color: var(--text); font-size: 12px; }
-.chip-remove { display: grid; place-items: center; width: 25px; height: 25px; padding: 0; border-radius: 50%; color: var(--red); background: var(--red-soft); font-size: 16px; line-height: 1; }
-.add-chip { min-height: 36px; color: var(--navy); background: #fff; border: 1px dashed var(--border-strong); box-shadow: none; }
-.add-chip:hover { background: var(--navy-soft); border-color: var(--navy); }
-
-.modal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(9, 27, 58, 0.58); backdrop-filter: blur(5px); }
-.modal-content { width: min(920px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 0; background: #fff; border-radius: 18px; box-shadow: var(--shadow-lg); animation: modalIn 180ms ease-out; }
-@keyframes modalIn { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
-.modal-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 22px 16px; background: rgba(255, 255, 255, 0.98); border-bottom: 1px solid var(--border); }
-.modal-header h2 { margin: 0; color: var(--navy); font-size: 20px; }
-.modal-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
-.modal-close { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 10px; color: var(--muted); background: #f2f4f7; font-size: 22px; }
-.modal-close:hover { color: var(--navy); background: #e8edf4; }
-.workbook-list { display: grid; gap: 12px; padding: 18px 22px; }
-.workbook-card { padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; transition: border-color var(--transition), box-shadow var(--transition); }
-.workbook-card.is-connected { border-color: #b8ddc7; box-shadow: inset 4px 0 0 var(--green); }
-.workbook-card.is-error { border-color: #f1c0c4; box-shadow: inset 4px 0 0 var(--red); }
-.workbook-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
-.workbook-title { display: flex; align-items: center; gap: 10px; }
-.workbook-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--navy-soft); font-size: 19px; }
-.workbook-title strong, .workbook-title small { display: block; }
-.workbook-title strong { color: var(--navy); font-size: 13px; }
-.workbook-title small { margin-top: 3px; color: var(--muted); font-size: 11px; }
-.workbook-card > label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
-.workbook-url-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
-.workbook-url-input { width: 100%; min-height: 42px; padding: 0 12px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
-.workbook-status { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
-.workbook-status.offline { color: var(--muted); background: #e9edf3; }
-.workbook-status.online { color: var(--green); background: var(--green-soft); }
-.workbook-status.syncing { color: var(--orange); background: var(--orange-soft); }
-.workbook-status.error { color: var(--red); background: var(--red-soft); }
-.workbook-last-sync { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; }
-.modal-actions { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 15px 22px; background: rgba(255, 255, 255, 0.98); border-top: 1px solid var(--border); }
-
-.confirm-overlay { position: fixed; inset: 0; z-index: 2200; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(9, 27, 58, 0.58); backdrop-filter: blur(5px); }
-.confirm-box { width: min(390px, 100%); padding: 22px; background: #fff; border-radius: 16px; box-shadow: var(--shadow-lg); }
-.confirm-box h3 { margin: 0; color: var(--navy); }
-.confirm-box p { margin: 10px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
-.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.inline-warning-box { position: fixed; left: 50%; bottom: 24px; z-index: 3000; width: max-content; max-width: min(720px, calc(100vw - 32px)); padding: 12px 16px; color: #fff; background: #162033; border-radius: 11px; box-shadow: var(--shadow-lg); transform: translateX(-50%); font-size: 12px; font-weight: 700; }
-
-#report { overflow: hidden; padding: 14px; background: #fff; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-md); }
-.rep-header { padding: 18px 22px; color: #fff; background: radial-gradient(circle at top right, rgba(233, 201, 143, 0.24), transparent 26%), linear-gradient(135deg, var(--navy), var(--navy-dark)); border-radius: 15px; }
-.rep-header-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.rep-header-content { min-width: 0; flex: 1; }
-.rep-title { margin: 0; font-size: clamp(19px, 2vw, 27px); font-weight: 850; line-height: 1.15; letter-spacing: 0.01em; }
-.rep-period-box { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 7px 12px; color: var(--navy); background: #fff; border-radius: 9px; font-size: 11px; font-weight: 800; }
-.rep-logo-img { display: block; width: auto; max-width: 150px; max-height: 58px; object-fit: contain; }
-.rep-banner { margin: 12px 0; padding: 10px 14px; color: var(--navy); background: #f7f9fc; border: 1px solid var(--border); border-left: 4px solid var(--gold-dark); border-radius: 10px; font-size: 11px; font-weight: 750; }
-.rep-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.rep-grid[data-count="1"] { grid-template-columns: 1fr; }
-.rep-grid[data-count="3"] .rep-card:last-child { grid-column: 1 / -1; }
-.rep-card { min-width: 0; overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
-.rep-card-head { display: flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 13px; color: #fff; background: var(--navy); }
-.rep-card-title-group { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.rep-card-icon { font-size: 15px; }
-.rep-card-title-text { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 850; text-align: center; }
-.rep-card-subtitle { color: rgba(255, 255, 255, 0.75); font-size: 9px; font-weight: 650; }
-.rep-table-wrapper { width: 100%; overflow-x: auto; }
-.rep-table { width: 100%; min-width: 100%; border-collapse: collapse; font-size: 10px; }
-.rep-table th, .rep-table td { padding: 6px 5px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
-.rep-table th { color: var(--muted); background: #eef2f7; font-size: 9px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.02em; }
-.rep-table th.farm-col, .rep-table td.farm-col { width: 190px; min-width: 150px; padding-left: 11px; text-align: left; }
-.rep-table td.farm-col { color: var(--text); font-weight: 750; }
-.rep-table th.pend-col { color: var(--navy-dark); background: var(--gold); }
-.status-cell { min-width: 38px; }
-.rep-icon { display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border-radius: 50%; color: #fff; border: 0; font-size: 10px; font-weight: 900; transition: transform var(--transition), box-shadow var(--transition); }
-.rep-icon:hover { transform: scale(1.08); }
-.rep-icon.ok { background: var(--green); }
-.rep-icon.no { background: var(--red); }
-.rep-icon.blank { color: var(--muted); background: #fff; border: 1.5px solid #c8d1dd; }
-.rep-total, .total-pending-cell { font-weight: 900; }
-.has-pending { color: var(--red) !important; background: var(--red-soft) !important; }
-.no-pending { color: var(--green) !important; background: var(--green-soft) !important; }
-.pend-row td { color: var(--navy-dark); background: var(--gold); font-weight: 850; }
-.pend-row-navy td { color: #fff; background: var(--navy); }
-.group-header { color: #fff !important; background: var(--navy) !important; }
-.num-input { width: 58px; height: 28px; padding: 0 5px; text-align: center; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 7px; font-size: 10px; font-weight: 700; }
-.num-print-value { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; font-size: 10px; font-weight: 700; }
-.diff-val { font-size: 10px; font-weight: 900; }
-.diff-val.zero { color: var(--muted); }
-.diff-val.positive, .diff-val.negative, .diff-val.nonzero { color: var(--red); }
-.diff-val.empty { color: #a7b0bd; }
-.report-empty-state, .panel-empty-state { display: grid; place-items: center; gap: 7px; min-height: 150px; padding: 24px; color: var(--muted); text-align: center; }
-.report-empty-state { grid-column: 1 / -1; border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--surface); }
-.report-empty-icon { font-size: 28px; }
-.report-empty-state strong, .panel-empty-state strong { color: var(--navy); }
-.report-empty-state p, .panel-empty-state p { margin: 0; font-size: 11px; }
-.rep-bottombar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 11px 14px; color: #fff; background: var(--navy); border-radius: 12px; font-size: 10px; font-weight: 850; letter-spacing: 0.03em; text-align: center; }
-
-@media (max-width: 1080px) {
-    .toolbar { grid-template-columns: 1fr auto; }
-    .toolbar-center { grid-column: 1 / -1; grid-row: 2; }
-    .connection-card { width: 100%; }
-}
-@media (max-width: 820px) {
-    .app { width: min(100% - 20px, 1450px); padding-top: 10px; }
-    .toolbar { position: static; grid-template-columns: 1fr; gap: 14px; padding: 16px; }
-    .toolbar-right { justify-content: flex-start; }
-    .config-grid, .rep-grid { grid-template-columns: 1fr; }
-    .rep-grid[data-count="3"] .rep-card:last-child { grid-column: auto; }
-    .workbook-url-row { grid-template-columns: 1fr; }
-    .workbook-url-row .btn-primary, .workbook-url-row .btn-danger { width: 100%; }
-    .rep-header-top { align-items: flex-start; }
-    .rep-logo-img { max-width: 110px; max-height: 48px; }
-}
-@media (max-width: 560px) {
-    .filter-bar { align-items: stretch; }
-    .filter-card, .date-input, .filter-card input[type="date"] { width: 100%; }
-    .filter-bar .btn-secondary { flex: 1 1 140px; }
-    .toolbar-right > button, .toolbar-right .config-dropdown { flex: 1 1 140px; }
-    .toolbar-right .btn-config { width: 100%; }
-    .panel-select-item { grid-template-columns: auto auto minmax(0, 1fr); }
-    .slot-hint { grid-column: 3; }
-    .modal-actions, .confirm-actions { flex-direction: column-reverse; }
-    .modal-actions button, .confirm-actions button { width: 100%; }
-    .rep-header-top { flex-direction: column; }
-    .rep-logo { width: 100%; }
-    .rep-logo-img { margin-left: auto; }
-    .rep-bottombar { flex-wrap: wrap; }
-}
-@media print {
-    body { background: #fff; }
-    .app { width: 100%; max-width: none; margin: 0; padding: 0; }
-    .toolbar, .filter-bar, .panel-config, .inline-warning-box, .modal, .confirm-overlay { display: none !important; }
-    #report { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
-    .rep-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .rep-grid[data-count="1"] { grid-template-columns: 1fr; }
-    .rep-table-wrapper { overflow: visible; }
-    .rep-card, .rep-header, .rep-bottombar { break-inside: avoid; }
-    @page { size: landscape; margin: 7mm; }
+.hero {
+    min-height: 540px;
+    color: #fff;
 }
 
-
-/* ============================================================
-   ALINHAMENTO DAS TABELAS DIÁRIAS NA TELA
-============================================================ */
-
-.rep-table-daily {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-}
-
-/* Coluna Fazenda */
-.rep-table-daily th.farm-col,
-.rep-table-daily td.farm-col {
-    width: 28%;
-    min-width: 0;
-}
-
-/* Colunas dos dias */
-.rep-table-daily th:not(.farm-col):not(.pend-col),
-.rep-table-daily td:not(.farm-col):not(.pend-col) {
-    width: auto;
-    text-align: center;
-}
-
-/* Coluna Pendências */
-.rep-table-daily th.pend-col,
-.rep-table-daily td.pend-col,
-.rep-table-daily .total-pending-cell {
-    width: 92px;
-    min-width: 92px;
-    max-width: 92px;
-}
-
-/* Impede que textos alterem o tamanho das colunas */
-.rep-table-daily th,
-.rep-table-daily td {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-/* Mantém os ícones centralizados */
-.rep-table-daily .rep-icon {
-    margin: 0 auto;
-}
-
-/* Divergências continua com estrutura própria */
-.rep-table-diverg {
-    width: 100%;
-    table-layout: fixed;
-}
-/* ============================================================
-   DIVERGÊNCIAS
-   Compactada para alinhar visualmente com a tabela ao lado.
-============================================================ */
-
-.rep-card-divergencias,
-.rep-card-diverg {
-    height: auto !important;
-    min-height: 0 !important;
-}
-
-.rep-card-divergencias .rep-table,
-.rep-card-diverg .rep-table,
-.rep-table-diverg {
-    width: 100%;
-    height: auto !important;
-    table-layout: fixed;
-}
-
-/* Cabeçalhos mais compactos */
-.rep-table-diverg thead th {
-    height: 23px;
-    padding: 3px 4px !important;
-    line-height: 1;
-    font-size: 8px;
-}
-
-/* Linhas da divergência menores para compensar o cabeçalho duplo */
-.rep-table-diverg tbody tr {
-    height: 37px;
-}
-
-.rep-table-diverg tbody td {
-    height: 37px;
-    padding: 3px 4px !important;
-    line-height: 1;
-}
-
-/* Rodapé compacto */
-.rep-table-diverg tfoot td {
-    height: 29px;
-    padding: 3px 4px !important;
-    line-height: 1;
-}
-
-/* Inputs menores, mantendo leitura confortável */
-.rep-table-diverg .num-input {
-    width: 54px;
-    height: 27px;
-    min-height: 27px;
-    padding: 0 4px;
-    font-size: 10px;
-}
-
-/* Diferenças bem destacadas */
-.rep-table-diverg .diff-val,
-.rep-table-diverg td.diff-val,
-.rep-table-diverg tfoot .diff-val {
-    font-weight: 900 !important;
-}
-
-/* Mantém a primeira coluna proporcional */
-.rep-table-diverg th.farm-col,
-.rep-table-diverg td.farm-col {
-    width: 27%;
-    min-width: 150px;
-}
-
-/* Impede que regras antigas voltem a criar altura artificial */
-.rep-card .rep-table-wrapper,
-.rep-card .rep-table {
-    flex: none !important;
-}
-
-/* ============================================================
-   AJUSTE FINAL — DIÁRIO E DIVERGÊNCIAS
-   Mantém os dois cards exatamente com a mesma altura.
-============================================================ */
-
-:root {
-    --altura-cards-diario-divergencias: 548px;
-}
-
-/* Somente Diário e Divergências recebem altura fixa igual */
-.rep-card[data-panel="diario"],
-.rep-card[data-panel="divergencias"],
-.rep-card-divergencias {
-    height: var(--altura-cards-diario-divergencias) !important;
-    min-height: var(--altura-cards-diario-divergencias) !important;
-    max-height: var(--altura-cards-diario-divergencias) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}
-
-/* A área das tabelas ocupa todo o espaço restante dos cards */
-.rep-card[data-panel="diario"] .rep-table-wrapper,
-.rep-card[data-panel="divergencias"] .rep-table-wrapper,
-.rep-card-divergencias .rep-table-wrapper {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: hidden !important;
-}
-
-/* As duas tabelas ocupam toda a altura disponível */
-.rep-card[data-panel="diario"] .rep-table,
-.rep-card[data-panel="divergencias"] .rep-table,
-.rep-card-divergencias .rep-table,
-.rep-table-diverg {
-    width: 100% !important;
-    height: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-}
-
-/* Distribui as linhas do Diário para preencher o mesmo tamanho */
-.rep-card[data-panel="diario"] .rep-table thead {
-    height: 30px;
-}
-
-.rep-card[data-panel="diario"] .rep-table tfoot {
-    height: 34px;
-}
-
-.rep-card[data-panel="diario"] .rep-table tbody tr {
-    height: calc(
-        (var(--altura-cards-diario-divergencias) - 42px - 30px - 34px)
-        / 10
-    );
-}
-
-/* Divergências nunca cresce quando os valores são preenchidos */
-.rep-card[data-panel="divergencias"] .rep-table thead,
-.rep-card-divergencias .rep-table thead {
-    height: 55px;
-}
-
-.rep-card[data-panel="divergencias"] .rep-table tfoot,
-.rep-card-divergencias .rep-table tfoot {
-    height: 34px;
-}
-
-.rep-card[data-panel="divergencias"] .rep-table tbody tr,
-.rep-card-divergencias .rep-table tbody tr {
-    height: calc(
-        (var(--altura-cards-diario-divergencias) - 42px - 55px - 34px)
-        / 10
-    ) !important;
-}
-
-/* Impede que conteúdo ou inputs alterem a altura das linhas */
-.rep-card[data-panel="divergencias"] .rep-table th,
-.rep-card[data-panel="divergencias"] .rep-table td,
-.rep-card-divergencias .rep-table th,
-.rep-card-divergencias .rep-table td {
-    padding: 3px 4px !important;
-    line-height: 1 !important;
-    overflow: hidden !important;
-    white-space: nowrap !important;
-}
-
-.rep-card[data-panel="divergencias"] .num-input,
-.rep-card-divergencias .num-input,
-.rep-table-diverg .num-input {
-    width: 64px !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    max-height: 30px !important;
-    padding: 0 5px !important;
-    line-height: 30px !important;
-    font-size: 10px !important;
-}
-
-/* Números das colunas DIFERENÇA sempre em negrito */
-.rep-card[data-panel="divergencias"] .diff-val,
-.rep-card-divergencias .diff-val,
-.rep-table-diverg .diff-val,
-.rep-table-diverg td.diff-val,
-.rep-table-diverg tfoot td.diff-val {
-    font-weight: 900 !important;
-}
-
-/* Nova cor do rodapé TOTAL da tabela de Divergências */
-.rep-card[data-panel="divergencias"] .pend-row-navy td,
-.rep-card-divergencias .pend-row-navy td,
-.rep-table-diverg .pend-row-navy td {
-    color: #ffffff !important;
-    background: #173c74 !important;
-    font-weight: 900 !important;
-}
-
-/* Destaque do texto TOTAL */
-.rep-card[data-panel="divergencias"] .pend-row-navy td.farm-col,
-.rep-card-divergencias .pend-row-navy td.farm-col,
-.rep-table-diverg .pend-row-navy td.farm-col {
-    color: #f4d38f !important;
-    background: #173c74 !important;
-    font-weight: 900 !important;
-}
-
-/* Os totais das diferenças ficam brancos e em negrito */
-.rep-card[data-panel="divergencias"] .pend-row-navy .diff-val,
-.rep-card-divergencias .pend-row-navy .diff-val,
-.rep-table-diverg .pend-row-navy .diff-val {
-    color: #ffffff !important;
-    font-weight: 900 !important;
-}
-
-/* Em telas menores, remove a altura fixa */
-@media (max-width: 820px) {
-    .rep-card[data-panel="diario"],
-    .rep-card[data-panel="divergencias"],
-    .rep-card-divergencias {
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-    }
-
-    .rep-card[data-panel="diario"] .rep-table,
-    .rep-card[data-panel="divergencias"] .rep-table,
-    .rep-card-divergencias .rep-table {
-        height: auto !important;
-    }
-
-    .rep-card[data-panel="diario"] .rep-table tbody tr,
-    .rep-card[data-panel="divergencias"] .rep-table tbody tr,
-    .rep-card-divergencias .rep-table tbody tr {
-        height: auto !important;
-    }
-}
-
-
-/* ============================================================
-   CORREÇÃO VISUAL — IMPORTAÇÃO LOCAL NO MODAL
-============================================================ */
-
-.local-import-card {
+.topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    margin: 18px 22px 0;
-    padding: 16px 18px;
-    background: linear-gradient(135deg, #edf3ff 0%, #f7f9ff 100%);
-    border: 1px solid #cbdafb;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(15, 42, 92, 0.06);
+    gap: 16px;
+    padding: 14px 0;
 }
 
-.local-import-info {
+.brand, .nav-actions, .hero-actions {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-width: 0;
-    flex: 1;
 }
 
-.local-import-icon {
+.brand {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+}
+
+.brand-mark {
     display: grid;
     place-items: center;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 4px 12px rgba(15, 42, 92, 0.08);
-    font-size: 22px;
+    width: 42px;
+    height: 42px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.45);
 }
 
-.local-import-info > div {
-    min-width: 0;
-}
-
-.local-import-info strong {
-    display: block;
-    margin: 0;
-    color: #102a56;
+.nav-actions a {
+    color: rgba(255, 255, 255, 0.78);
     font-size: 14px;
-    font-weight: 800;
-    line-height: 1.25;
-}
-
-.local-import-info small {
-    display: block;
-    margin-top: 5px;
-    color: #667085;
-    font-size: 11px;
-    line-height: 1.45;
-}
-
-.local-import-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 170px;
-    min-height: 42px;
-    flex: 0 0 auto;
-    padding: 0 16px;
-    color: #102a56;
-    background: #ffffff;
-    border: 1px solid #c8d2df;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(15, 42, 92, 0.06);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 800;
-    transition: 180ms ease;
-}
-
-.local-import-button:hover {
-    background: #f5f8ff;
-    border-color: #9fb4db;
-    transform: translateY(-1px);
-}
-
-.modal-separator {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 20px 22px 0;
-    color: #667085;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.modal-separator::before,
-.modal-separator::after {
-    content: "";
-    height: 1px;
-    flex: 1;
-    background: #dce3ec;
-}
-
-.workbook-modal-content {
-    overflow-x: hidden;
-}
-
-@media (max-width: 650px) {
-    .local-import-card {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .local-import-button {
-        width: 100%;
-        min-width: 0;
-    }
-
-    .modal-separator {
-        margin-left: 16px;
-        margin-right: 16px;
-    }
-}
-
-/* ============================================================
-   AÇÕES DOS DIAS DO RELATÓRIO — VERSÃO FINAL
-============================================================ */
-
-.day-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    width: 100%;
-    margin-top: 10px;
-}
-
-#dayList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-    margin-bottom: 0;
-}
-
-#dayList:empty {
-    display: none;
-}
-
-#addDayBtn,
-#enableManualEntryBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-width: 170px;
-    min-height: 36px;
-    margin: 0;
-}
-
-#addDayBtn {
-    color: var(--navy);
-    background: #ffffff;
-    border: 1px dashed var(--border-strong);
-}
-
-.manual-entry-btn {
-    color: #102a56;
-    background: #edf3ff;
-    border: 1px dashed #b9caec;
-}
-
-#addDayBtn:hover,
-.manual-entry-btn:hover {
-    color: #ffffff;
-    background: #102a56;
-    border-color: #102a56;
-}
-
-#enableManualEntryBtn.is-active {
-    color: #ffffff;
-    background: #102a56;
-    border-color: #102a56;
-}
-
-.day-actions > :empty,
-.config-card > button:empty,
-.config-card > label:empty {
-    display: none !important;
-}
-
-/* Período visível na exportação */
-.rep-period-box {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    width: auto;
-    min-width: max-content;
-    white-space: nowrap;
-}
-
-.rep-period-label,
-#periodDisplay {
-    display: inline-block;
-    color: #102a56;
-    font-weight: 900;
-    white-space: nowrap;
-}
-
-/* ============================================================
-   EXPORTAÇÃO DA IMAGEM — FONTE MAIOR E LEGÍVEL
-============================================================ */
-
-/*
- * Mantém 1800px de largura. A tentativa com 2400px fazia a
- * imagem inteira ser reduzida ainda mais ao abrir no celular,
- * anulando visualmente o aumento das fontes.
- */
-#report.export-capture {
-    width: 1800px !important;
-    max-width: none !important;
-    overflow: visible !important;
-}
-
-#report.export-capture .rep-grid {
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr)) !important;
-    align-items: start !important;
-}
-
-#report.export-capture .rep-card {
-    min-width: 0 !important;
-    overflow: hidden !important;
-}
-
-#report.export-capture .rep-table-wrapper {
-    width: 100% !important;
-    overflow: hidden !important;
-}
-
-#report.export-capture .rep-table {
-    width: 100% !important;
-    min-width: 0 !important;
-}
-
-#report.export-capture .rep-table-daily {
-    table-layout: fixed !important;
-}
-
-#report.export-capture
-.rep-table-daily th.farm-col,
-#report.export-capture
-.rep-table-daily td.farm-col {
-    width: 28% !important;
-    min-width: 0 !important;
-}
-
-#report.export-capture
-.rep-table-daily th.pend-col,
-#report.export-capture
-.rep-table-daily td.pend-col,
-#report.export-capture
-.rep-table-daily .total-pending-cell {
-    width: 112px !important;
-    min-width: 112px !important;
-    max-width: 112px !important;
-}
-
-/* Cabeçalho principal */
-#report.export-capture .rep-title {
-    font-size: 36px !important;
-    font-weight: 900 !important;
-}
-
-#report.export-capture .rep-period-box {
-    font-size: 17px !important;
-    font-weight: 900 !important;
-    padding: 9px 16px !important;
-}
-
-#report.export-capture .rep-banner {
-    font-size: 15px !important;
-    font-weight: 800 !important;
-    padding: 12px 16px !important;
-}
-
-/* Títulos dos painéis */
-#report.export-capture .rep-card-head {
-    min-height: 58px !important;
-    padding: 10px 14px !important;
-}
-
-#report.export-capture .rep-card-icon {
-    font-size: 22px !important;
-}
-
-#report.export-capture .rep-card-title-text,
-#report.export-capture .rep-card-title-text span {
-    font-size: 19px !important;
-    font-weight: 900 !important;
-    line-height: 1.15 !important;
-}
-
-#report.export-capture .rep-card-subtitle {
-    font-size: 13px !important;
-    font-weight: 850 !important;
-}
-
-/* Cabeçalhos: Fazenda, datas, Pendências e Status */
-#report.export-capture .rep-table th,
-#report.export-capture .rep-table-diverg thead th {
-    font-size: 14px !important;
-    font-weight: 900 !important;
-    line-height: 1.1 !important;
-}
-
-/* Nomes, textos e números das linhas */
-#report.export-capture .rep-table td {
-    font-size: 16px !important;
-    font-weight: 800 !important;
-    line-height: 1.1 !important;
-}
-
-#report.export-capture .rep-table td.farm-col {
-    font-size: 17px !important;
-    font-weight: 900 !important;
-}
-
-/* Pendências e totais */
-#report.export-capture .rep-total,
-#report.export-capture .total-pending-cell,
-#report.export-capture .pend-row td {
-    font-size: 16px !important;
-    font-weight: 900 !important;
-}
-
-/* Ícones de status */
-#report.export-capture .rep-icon {
-    width: 30px !important;
-    height: 30px !important;
-    font-size: 15px !important;
-    line-height: 30px !important;
-}
-
-/* Divergências */
-#report.export-capture .rep-table-diverg td,
-#report.export-capture .rep-table-diverg .diff-val,
-#report.export-capture .num-print-value {
-    font-size: 15px !important;
-    font-weight: 900 !important;
-}
-
-#report.export-capture .rep-table-diverg .diff-val {
-    font-weight: 900 !important;
-}
-
-#report.export-capture .num-input {
-    width: 72px !important;
-    height: 34px !important;
-    font-size: 15px !important;
-    font-weight: 850 !important;
-}
-
-/* Mantém a estrutura fixa da tabela de Divergências */
-#report.export-capture .rep-table-diverg {
-    table-layout: fixed !important;
-}
-
-/* ============================================================
-   LEGIBILIDADE E ALINHAMENTO FINAL DOS CARDS
-============================================================ */
-
-/* Títulos de todos os cards maiores e mais legíveis */
-.rep-card-head {
-    min-height: 50px;
-    padding: 10px 14px;
-}
-
-.rep-card-title-group {
-    gap: 10px;
-}
-
-.rep-card-title-text,
-.rep-card-head > span {
-    font-size: 14px;
-    font-weight: 900;
-    line-height: 1.15;
-}
-
-.rep-card-subtitle {
-    font-size: 10px;
-    font-weight: 750;
-}
-
-.rep-card-icon {
-    font-size: 17px;
-}
-
-/* Textos e números das tabelas um pouco maiores */
-.rep-table {
-    font-size: 11px;
-}
-
-.rep-table th {
-    font-size: 10px;
-    font-weight: 900;
-}
-
-.rep-table td {
-    font-size: 11px;
     font-weight: 700;
 }
 
-/* Ícones de status maiores sem deformar as linhas */
-.rep-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
-    transform: none;
+.nav-actions .nav-cta {
+    padding: 10px 14px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
 }
 
-/* ============================================================
-   MAPA MENSAL — MESMA ALTURA DO DIÁRIO
-============================================================ */
-
-.rep-card:has(.rep-table-monthly) {
-    height: var(--altura-cards-diario-divergencias) !important;
-    min-height: var(--altura-cards-diario-divergencias) !important;
-    max-height: var(--altura-cards-diario-divergencias) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
+.hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) 380px;
+    align-items: center;
+    gap: 48px;
+    padding: 72px 0 48px;
 }
 
-.rep-card:has(.rep-table-monthly) .rep-table-wrapper {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: hidden !important;
+.hero-copy h1 {
+    max-width: 820px;
+    margin: 12px 0 18px;
+    font-size: clamp(42px, 7vw, 82px);
+    line-height: 0.94;
+    letter-spacing: -0.07em;
 }
 
-.rep-table-monthly {
-    width: 100% !important;
-    height: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
+.hero-copy p {
+    max-width: 640px;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 18px;
+    line-height: 1.7;
 }
 
-.rep-table-monthly thead {
-    height: 34px;
+.eyebrow {
+    display: inline-flex;
+    width: fit-content;
+    margin: 0;
+    padding: 7px 11px;
+    color: #dbeafe;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-.rep-table-monthly tfoot {
-    height: 34px;
+.eyebrow.dark {
+    color: var(--purple-dark);
+    background: #ede9fe;
+    border-color: #ddd6fe;
 }
 
-.rep-table-monthly tbody tr {
-    height: calc(
-        (var(--altura-cards-diario-divergencias) - 50px - 34px - 34px)
-        / 10
-    );
+.hero-actions { margin-top: 28px; flex-wrap: wrap; }
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 900;
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.button:hover { transform: translateY(-2px); }
+.button.primary { color: #fff; background: linear-gradient(135deg, var(--purple), var(--purple-dark)); box-shadow: 0 16px 34px rgba(124, 58, 237, 0.34); }
+.button.secondary { color: var(--purple-dark); background: #fff; border: 1px solid var(--line); }
+.button.full { width: 100%; }
+
+.assistant-card {
+    display: grid;
+    gap: 18px;
+    padding: 26px;
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px);
 }
 
-.rep-table-monthly th,
-.rep-table-monthly td {
-    padding: 5px 6px !important;
-    line-height: 1.1;
+.assistant-avatar {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #ede9fe, #cffafe);
+    border-radius: 22px;
+    font-size: 34px;
 }
 
-.rep-table-monthly th.farm-col,
-.rep-table-monthly td.farm-col {
-    width: 28%;
-    min-width: 0;
+.assistant-label {
+    margin: 0 0 6px;
+    color: var(--purple-dark);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+.assistant-card h2 { margin: 0 0 12px; font-size: 28px; letter-spacing: -0.04em; }
+.assistant-card p:last-child { margin: 0; color: var(--muted); line-height: 1.6; }
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: -74px;
+    margin-bottom: 18px;
 }
 
-.rep-table-monthly th.pend-col,
-.rep-table-monthly td.pend-col {
-    width: auto;
+.metric-card, .panel {
+    background: var(--panel);
+    border: 1px solid rgba(228, 231, 236, 0.9);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
 }
 
-/* Mantém Diário, Mensal e Divergências iguais na mesma linha */
-.rep-card[data-panel="diario"],
-.rep-card[data-panel="divergencias"],
-.rep-card-divergencias,
-.rep-card:has(.rep-table-monthly) {
-    height: var(--altura-cards-diario-divergencias) !important;
-    min-height: var(--altura-cards-diario-divergencias) !important;
-    max-height: var(--altura-cards-diario-divergencias) !important;
+.metric-card {
+    padding: 22px;
+}
+.metric-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+.metric-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: clamp(24px, 3vw, 34px);
+    letter-spacing: -0.05em;
+}
+.metric-card.income strong { color: var(--cyan); }
+.metric-card.expense strong { color: var(--red); }
+.metric-card.investment strong { color: var(--green); }
+.metric-card.balance strong { color: var(--purple-dark); }
+
+.workspace {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
 }
 
-/* Em telas pequenas, os cards voltam à altura natural */
-@media (max-width: 820px) {
-    .rep-card:has(.rep-table-monthly) {
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-    }
-
-    .rep-table-monthly {
-        height: auto !important;
-    }
-
-    .rep-table-monthly tbody tr {
-        height: auto !important;
-    }
+.panel {
+    padding: 24px;
+}
+.panel-heading { margin-bottom: 18px; }
+.panel-heading h2 {
+    margin: 10px 0 0;
+    font-size: 24px;
+    letter-spacing: -0.04em;
 }
 
-/* ============================================================
-   EXPORTAÇÃO — CORREÇÃO DEFINITIVA DE CORTE E LEGIBILIDADE
-   Estas regras atuam somente na imagem salva.
-============================================================ */
-
-/*
- * Na exportação, os cards inferiores deixam de ter altura fixa.
- * A grade mantém os dois cards da mesma linha com a mesma altura,
- * mas permite que o conteúdo completo determine essa altura.
- */
-#report.export-capture .rep-grid {
-    align-items: stretch !important;
+.finance-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.finance-form.compact { grid-template-columns: 1fr; }
+.finance-form label {
+    display: grid;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+.finance-form input, .finance-form select {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    color: var(--ink);
+    background: var(--panel-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+}
+.finance-form input:focus, .finance-form select:focus {
+    outline: 3px solid rgba(124, 58, 237, 0.16);
+    border-color: var(--purple);
 }
 
-#report.export-capture .rep-card[data-panel="diario"],
-#report.export-capture .rep-card[data-panel="divergencias"],
-#report.export-capture .rep-card-divergencias,
-#report.export-capture .rep-card:has(.rep-table-monthly) {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    align-self: stretch !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: visible !important;
+.progress-stack {
+    display: grid;
+    gap: 16px;
+    margin-top: 22px;
+}
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+.progress {
+    height: 12px;
+    overflow: hidden;
+    background: #fee2e2;
+    border-radius: 999px;
+}
+.progress.success { background: #dcfce7; }
+.progress i {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--red);
+    border-radius: inherit;
+    transition: width 180ms ease;
+}
+.progress.success i { background: var(--green); }
+
+.advice-list, .transaction-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.advice-list li {
+    padding: 14px;
+    background: linear-gradient(135deg, #f5f3ff, #ecfeff);
+    border: 1px solid #ddd6fe;
+    border-radius: 16px;
+    line-height: 1.55;
+}
+.transaction-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    background: var(--panel-soft);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+}
+.transaction-list strong, .transaction-list small { display: block; }
+.transaction-list small { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.transaction-list button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    color: var(--red);
+    background: #fee2e2;
+    border-radius: 50%;
+    font-size: 20px;
 }
 
-/* Área interna sem corte */
-#report.export-capture
-.rep-card[data-panel="diario"] .rep-table-wrapper,
-#report.export-capture
-.rep-card[data-panel="divergencias"] .rep-table-wrapper,
-#report.export-capture
-.rep-card-divergencias .rep-table-wrapper,
-#report.export-capture
-.rep-card:has(.rep-table-monthly) .rep-table-wrapper {
-    flex: 1 1 auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
+@media (max-width: 980px) {
+    .hero-grid, .metrics, .workspace { grid-template-columns: 1fr; }
+    .metrics { margin-top: -34px; }
+    .assistant-card { max-width: 520px; }
 }
 
-/* Tabelas com altura natural */
-#report.export-capture
-.rep-card[data-panel="diario"] .rep-table,
-#report.export-capture
-.rep-card[data-panel="divergencias"] .rep-table,
-#report.export-capture
-.rep-card-divergencias .rep-table,
-#report.export-capture
-.rep-card:has(.rep-table-monthly) .rep-table {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-}
-
-/* Nenhuma linha ou rodapé pode ser escondido */
-#report.export-capture .rep-table tbody tr,
-#report.export-capture .rep-table tfoot,
-#report.export-capture .rep-table tfoot tr,
-#report.export-capture .rep-table tfoot td {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-/* Espaço seguro para PENDÊNCIAS e TOTAL */
-#report.export-capture .rep-table tfoot td {
-    padding-top: 11px !important;
-    padding-bottom: 11px !important;
-    line-height: 1.2 !important;
-}
-
-/* Títulos dos quatro painéis */
-#report.export-capture .rep-card-title-text,
-#report.export-capture .rep-card-title-text span {
-    font-size: 27px !important;
-    font-weight: 900 !important;
-    line-height: 1.12 !important;
-}
-
-#report.export-capture .rep-card-icon {
-    font-size: 31px !important;
-}
-
-#report.export-capture .rep-card-subtitle {
-    font-size: 18px !important;
-    font-weight: 850 !important;
-}
-
-/*
- * Textos acima e abaixo das planilhas com o mesmo tamanho
- * dos títulos dos painéis.
- */
-#report.export-capture .rep-banner,
-#report.export-capture .rep-bottombar {
-    font-size: 27px !important;
-    font-weight: 900 !important;
-    line-height: 1.2 !important;
-}
-
-#report.export-capture .rep-banner {
-    padding: 15px 20px !important;
-}
-
-#report.export-capture .rep-bottombar {
-    margin-top: 18px !important;
-    padding: 17px 20px !important;
-}
-
-/* Evita qualquer corte na borda inferior do relatório */
-#report.export-capture {
-    padding-bottom: 24px !important;
-}
-
-/* ============================================================
-   EXPORTAÇÃO - CARDS DA MESMA ALTURA
-============================================================ */
-
-#report.export-capture .rep-grid{
-    display:grid !important;
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    align-items:stretch !important;
-    gap:14px !important;
-}
-
-#report.export-capture .rep-card{
-    display:flex !important;
-    flex-direction:column !important;
-    height:100% !important;
-}
-
-#report.export-capture .rep-table-wrapper{
-    flex:1 !important;
-    display:flex !important;
-}
-
-#report.export-capture .rep-table{
-    width:100% !important;
-    height:100% !important;
-    border-collapse:collapse !important;
-}
-
-#report.export-capture .rep-table tbody{
-    height:100% !important;
-}
-
-#report.export-capture .rep-table tfoot{
-    margin-top:auto !important;
-}
-
-#report.export-capture .rep-table tfoot tr{
-    height:48px !important;
-}
-
-
-/* ============================================================
-   LAYOUT DEFINITIVO DOS PAINÉIS
-   Regras finais para tela, impressão e imagem exportada.
-   Este bloco deve permanecer no final do arquivo.
-============================================================ */
-
-/* Base segura da grade */
-.rep-grid,
-#report.export-capture .rep-grid {
-    display: grid !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    gap: 14px !important;
-    align-items: stretch !important;
-}
-
-/* 1, 2 ou 3 painéis: sempre um abaixo do outro */
-.rep-grid[data-count="1"],
-.rep-grid[data-count="2"],
-.rep-grid[data-count="3"],
-#report.export-capture .rep-grid[data-count="1"],
-#report.export-capture .rep-grid[data-count="2"],
-#report.export-capture .rep-grid[data-count="3"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-}
-
-/* 4 painéis: grade 2 x 2 */
-.rep-grid[data-count="4"],
-#report.export-capture .rep-grid[data-count="4"] {
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr)) !important;
-}
-
-/*
- * Proteção para quantidades futuras.
- * 5 ou mais painéis continuam em duas colunas no desktop.
- */
-.rep-grid[data-count="5"],
-.rep-grid[data-count="6"],
-.rep-grid[data-count="7"],
-.rep-grid[data-count="8"],
-#report.export-capture .rep-grid[data-count="5"],
-#report.export-capture .rep-grid[data-count="6"],
-#report.export-capture .rep-grid[data-count="7"],
-#report.export-capture .rep-grid[data-count="8"] {
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr)) !important;
-}
-
-/* Nenhum card pode herdar grid-column antigo */
-.rep-grid > .rep-card,
-#report.export-capture .rep-grid > .rep-card {
-    grid-column: auto !important;
-    grid-row: auto !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    align-self: stretch !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-/*
- * Remove alturas fixas antigas que causavam:
- * - corte de PENDÊNCIAS;
- * - corte de TOTAL;
- * - espaço branco artificial;
- * - cards desalinhados quando a seleção mudava.
- */
-.rep-grid > .rep-card,
-.rep-card[data-panel="diario"],
-.rep-card[data-panel="divergencias"],
-.rep-card-divergencias,
-.rep-card-diverg,
-.rep-card:has(.rep-table-monthly),
-#report.export-capture .rep-grid > .rep-card,
-#report.export-capture .rep-card[data-panel="diario"],
-#report.export-capture .rep-card[data-panel="divergencias"],
-#report.export-capture .rep-card-divergencias,
-#report.export-capture .rep-card-diverg,
-#report.export-capture .rep-card:has(.rep-table-monthly) {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-}
-
-/* Área das tabelas sem cortes */
-.rep-grid .rep-table-wrapper,
-#report.export-capture .rep-grid .rep-table-wrapper {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-}
-
-/* Tabelas sempre ocupam toda a largura */
-.rep-grid .rep-table,
-#report.export-capture .rep-grid .rep-table {
-    width: 100% !important;
-    min-width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    border-collapse: collapse !important;
-}
-
-/* Nenhuma linha ou rodapé pode ser cortado */
-.rep-grid .rep-table tbody,
-.rep-grid .rep-table tbody tr,
-.rep-grid .rep-table tfoot,
-.rep-grid .rep-table tfoot tr,
-.rep-grid .rep-table tfoot td,
-#report.export-capture .rep-grid .rep-table tbody,
-#report.export-capture .rep-grid .rep-table tbody tr,
-#report.export-capture .rep-grid .rep-table tfoot,
-#report.export-capture .rep-grid .rep-table tfoot tr,
-#report.export-capture .rep-grid .rep-table tfoot td {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-}
-
-/* Rodapés PENDÊNCIAS e TOTAL sempre visíveis */
-.rep-grid .rep-table tfoot td,
-#report.export-capture .rep-grid .rep-table tfoot td {
-    padding-top: 9px !important;
-    padding-bottom: 9px !important;
-    line-height: 1.2 !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/*
- * Quando há quatro painéis, os cards da mesma linha ficam com
- * a mesma altura e a tabela usa todo o espaço disponível.
- */
-.rep-grid[data-count="4"] > .rep-card,
-#report.export-capture .rep-grid[data-count="4"] > .rep-card {
-    height: 100% !important;
-}
-
-.rep-grid[data-count="4"] > .rep-card .rep-table-wrapper,
-#report.export-capture
-.rep-grid[data-count="4"] > .rep-card .rep-table-wrapper {
-    flex: 1 1 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.rep-grid[data-count="4"] > .rep-card .rep-table,
-#report.export-capture
-.rep-grid[data-count="4"] > .rep-card .rep-table {
-    flex: 1 1 auto !important;
-    height: 100% !important;
-}
-
-/* Exportação: segue exatamente a mesma organização da tela */
-#report.export-capture .rep-grid[data-count="1"],
-#report.export-capture .rep-grid[data-count="2"],
-#report.export-capture .rep-grid[data-count="3"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-}
-
-#report.export-capture .rep-grid[data-count="4"] {
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr)) !important;
-}
-
-/* Na exportação, não esconder bordas ou conteúdo */
-#report.export-capture .rep-card,
-#report.export-capture .rep-table-wrapper {
-    overflow: visible !important;
-}
-
-/*
- * As tabelas diárias permanecem proporcionais em qualquer largura.
- */
-.rep-table-daily,
-#report.export-capture .rep-table-daily {
-    width: 100% !important;
-    table-layout: fixed !important;
-}
-
-.rep-table-daily th.farm-col,
-.rep-table-daily td.farm-col,
-#report.export-capture .rep-table-daily th.farm-col,
-#report.export-capture .rep-table-daily td.farm-col {
-    width: 28% !important;
-    min-width: 0 !important;
-}
-
-.rep-table-daily th.pend-col,
-.rep-table-daily td.pend-col,
-.rep-table-daily .total-pending-cell,
-#report.export-capture .rep-table-daily th.pend-col,
-#report.export-capture .rep-table-daily td.pend-col,
-#report.export-capture .rep-table-daily .total-pending-cell {
-    width: 145px !important;
-    min-width: 145px !important;
-    max-width: 145px !important;
-}
-
-/* PENDÊNCIAS nunca recebe reticências */
-.rep-table-daily th.pend-col,
-.rep-table-daily td.pend-col,
-.rep-table-daily .total-pending-cell,
-#report.export-capture .rep-table-daily th.pend-col,
-#report.export-capture .rep-table-daily td.pend-col,
-#report.export-capture .rep-table-daily .total-pending-cell {
-    overflow: visible !important;
-    white-space: nowrap !important;
-    text-overflow: clip !important;
-}
-
-/* Divergências e Mapa Mensal mantêm sua estrutura */
-.rep-table-diverg,
-.rep-table-monthly,
-#report.export-capture .rep-table-diverg,
-#report.export-capture .rep-table-monthly {
-    width: 100% !important;
-    table-layout: fixed !important;
-}
-
-/* Segurança para telas menores */
-@media (max-width: 820px) {
-    .rep-grid,
-    .rep-grid[data-count="1"],
-    .rep-grid[data-count="2"],
-    .rep-grid[data-count="3"],
-    .rep-grid[data-count="4"],
-    .rep-grid[data-count="5"],
-    .rep-grid[data-count="6"],
-    .rep-grid[data-count="7"],
-    .rep-grid[data-count="8"] {
-        grid-template-columns: minmax(0, 1fr) !important;
-    }
-
-    .rep-grid > .rep-card {
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-    }
-}
-
-/* Impressão segue a mesma regra da quantidade de painéis */
-@media print {
-    .rep-grid[data-count="1"],
-    .rep-grid[data-count="2"],
-    .rep-grid[data-count="3"] {
-        grid-template-columns: minmax(0, 1fr) !important;
-    }
-
-    .rep-grid[data-count="4"] {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    .rep-grid > .rep-card {
-        break-inside: avoid !important;
-    }
+@media (max-width: 680px) {
+    .app-shell { width: min(100% - 22px, 1180px); }
+    .nav-actions a:not(.nav-cta) { display: none; }
+    .hero { min-height: auto; }
+    .hero-grid { padding-top: 42px; }
+    .finance-form { grid-template-columns: 1fr; }
+    .metric-card, .panel, .assistant-card { border-radius: 18px; }
 }
