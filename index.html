@@ -745,6 +745,112 @@
     </div>
 
 
+
+    <!-- =====================================================
+         AGENTE FINANCEIRO IA
+    ====================================================== -->
+
+    <section class="finance-agent" aria-labelledby="financeAgentTitle">
+
+        <div class="finance-agent-hero">
+
+            <div>
+
+                <span class="eyebrow">🤖 Agente de IA financeiro</span>
+
+                <h2 id="financeAgentTitle">Controle de gastos, orçamento e investimentos</h2>
+
+                <p>
+                    Registre entradas, despesas e aportes para receber alertas automáticos,
+                    identificar categorias que mais consomem dinheiro e acompanhar sua meta de investimento.
+                </p>
+
+            </div>
+
+            <div class="finance-agent-badge">
+                Análise local • Dados salvos no navegador
+            </div>
+
+        </div>
+
+        <div class="finance-kpi-grid">
+            <article class="finance-kpi">
+                <span>Renda prevista</span>
+                <strong id="financeIncomeValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi danger">
+                <span>Gastos do mês</span>
+                <strong id="financeExpenseValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi success">
+                <span>Investido</span>
+                <strong id="financeInvestmentValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi balance">
+                <span>Saldo projetado</span>
+                <strong id="financeBalanceValue">R$ 0,00</strong>
+            </article>
+        </div>
+
+        <div class="finance-agent-grid">
+
+            <article class="finance-card">
+                <h3>Adicionar lançamento</h3>
+                <form id="financeTransactionForm" class="finance-form">
+                    <input name="description" type="text" placeholder="Descrição" required>
+                    <input name="category" type="text" placeholder="Categoria" required>
+                    <select name="type" aria-label="Tipo de lançamento">
+                        <option value="expense">Despesa</option>
+                        <option value="income">Renda</option>
+                        <option value="investment">Investimento</option>
+                    </select>
+                    <input name="amount" type="text" inputmode="decimal" placeholder="Valor" required>
+                    <input id="financeDate" name="date" type="date" required>
+                    <button class="btn-primary" type="submit">➕ Registrar</button>
+                </form>
+            </article>
+
+            <article class="finance-card">
+                <h3>Metas mensais</h3>
+                <form id="financeSettingsForm" class="finance-form">
+                    <label>
+                        Renda mensal
+                        <input id="financeMonthlyIncome" name="monthlyIncome" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Limite de gastos
+                        <input id="financeMonthlyBudget" name="monthlyBudget" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Meta de investimento
+                        <input id="financeInvestmentGoal" name="investmentGoal" type="text" inputmode="decimal">
+                    </label>
+                    <button class="btn-secondary" type="submit">💾 Salvar metas</button>
+                </form>
+            </article>
+
+            <article class="finance-card finance-insights">
+                <h3>Recomendações do agente</h3>
+                <div class="finance-progress-group">
+                    <span id="financeBudgetText">0% do orçamento usado</span>
+                    <div class="finance-progress"><i id="financeBudgetProgress"></i></div>
+                </div>
+                <div class="finance-progress-group">
+                    <span id="financeInvestmentText">0% da meta investida</span>
+                    <div class="finance-progress success"><i id="financeInvestmentProgress"></i></div>
+                </div>
+                <ul id="financeAdviceList" class="finance-advice-list"></ul>
+            </article>
+
+            <article class="finance-card">
+                <h3>Últimos lançamentos</h3>
+                <ul id="financeTransactionList" class="finance-transaction-list"></ul>
+            </article>
+
+        </div>
+
+    </section>
+
     <!-- =====================================================
          CONFIGURAÇÕES
     ====================================================== -->
@@ -1061,6 +1167,7 @@
 <script src="js/report.js"></script>
 <script src="js/render.js"></script>
 <script src="js/events.js"></script>
+<script src="js/finance-agent.js"></script>
 <script src="js/app.js"></script>
 
 </body>

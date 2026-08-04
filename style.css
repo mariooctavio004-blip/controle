@@ -1487,3 +1487,62 @@ button:disabled { cursor: not-allowed; opacity: 0.58; transform: none !important
         break-inside: avoid !important;
     }
 }
+
+.finance-agent {
+    margin-bottom: 18px;
+    padding: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+.finance-agent-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+    padding: 18px;
+    color: #fff;
+    background: radial-gradient(circle at top right, rgba(21, 148, 71, 0.28), transparent 30%), linear-gradient(135deg, var(--navy), var(--blue-dark));
+    border-radius: 16px;
+}
+.finance-agent-hero h2 { margin: 8px 0; font-size: clamp(22px, 2.5vw, 34px); line-height: 1.05; }
+.finance-agent-hero p { max-width: 760px; margin: 0; color: rgba(255, 255, 255, 0.82); line-height: 1.55; }
+.eyebrow { display: inline-flex; padding: 6px 10px; color: var(--navy); background: #fff; border-radius: 999px; font-size: 12px; font-weight: 850; }
+.finance-agent-badge { flex: 0 0 auto; padding: 10px 12px; color: var(--navy); background: var(--gold-soft); border-radius: 999px; font-size: 12px; font-weight: 850; }
+.finance-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.finance-kpi { padding: 14px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); }
+.finance-kpi span { display: block; color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; }
+.finance-kpi strong { display: block; margin-top: 7px; color: var(--navy); font-size: 22px; }
+.finance-kpi.danger strong { color: var(--red); }
+.finance-kpi.success strong { color: var(--green); }
+.finance-kpi.balance strong { color: var(--blue-dark); }
+.finance-agent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.finance-card { padding: 16px; background: #fff; border: 1px solid var(--border); border-radius: 14px; }
+.finance-card h3 { margin: 0 0 12px; color: var(--navy); font-size: 16px; }
+.finance-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.finance-form label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.finance-form input, .finance-form select { width: 100%; min-height: 42px; padding: 0 12px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.finance-form button { width: 100%; }
+.finance-progress-group { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 12px; font-weight: 800; }
+.finance-progress { height: 10px; overflow: hidden; background: var(--red-soft); border-radius: 999px; }
+.finance-progress.success { background: var(--green-soft); }
+.finance-progress i { display: block; width: 0; height: 100%; background: var(--red); border-radius: inherit; transition: width var(--transition); }
+.finance-progress.success i { background: var(--green); }
+.finance-advice-list, .finance-transaction-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.finance-advice-list li { padding: 10px 12px; color: var(--text); background: var(--navy-soft); border-radius: 10px; font-size: 13px; line-height: 1.45; }
+.finance-transaction-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.finance-transaction-list strong, .finance-transaction-list small { display: block; }
+.finance-transaction-list small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.finance-transaction-list button { display: grid; place-items: center; width: 26px; height: 26px; color: var(--red); background: var(--red-soft); border-radius: 50%; font-size: 18px; line-height: 1; }
+
+@media (max-width: 900px) {
+    .finance-agent-hero, .finance-kpi-grid, .finance-agent-grid { grid-template-columns: 1fr; }
+    .finance-agent-hero { display: grid; }
+    .finance-agent-badge { width: fit-content; }
+}
+
+@media (max-width: 620px) {
+    .finance-form { grid-template-columns: 1fr; }
+}
