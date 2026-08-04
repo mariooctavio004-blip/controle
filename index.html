@@ -75,5 +75,436 @@
     </main>
 
     <script src="js/finance-agent.js"></script>
+    <title>Pierre — Agente de Finanças</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="app-shell">
+        <header class="hero">
+            <nav class="topbar" aria-label="Navegação principal">
+                <a class="brand" href="#top" aria-label="Pierre, início">
+                    <span class="brand-mark">P</span>
+                    <span>Pierre</span>
+                </a>
+                <div class="nav-actions">
+                    <a href="#lancamentos">Lançamentos</a>
+                    <a href="#plano">Plano</a>
+                    <a class="nav-cta" href="#agente">Abrir agente</a>
+                </div>
+            </nav>
+
+            <section id="top" class="hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Seu copiloto financeiro pessoal</p>
+                    <h1>Pierre organiza seus gastos e mostra o melhor próximo passo.</h1>
+                    <p>
+                        Controle entradas, despesas e investimentos em uma experiência criada
+                        do zero para finanças pessoais — sem cara de painel antigo e sem depender
+                        de planilhas externas.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="button primary" href="#lancamentos">Registrar gasto</a>
+                        <a class="button secondary" href="#agente">Ver recomendações</a>
+                    </div>
+                </div>
+
+                <aside class="assistant-card" id="agente" aria-labelledby="assistantTitle">
+                    <span class="assistant-avatar">🤖</span>
+                <small
+                    id="divergenciasLastSync"
+                    class="workbook-last-sync"
+                >
+                    Nunca sincronizada
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                id="syncAllWorkbooksBtn"
+                class="btn-primary"
+                type="button"
+            >
+                🔄 Sincronizar todas
+            </button>
+
+            <button
+                id="closeWorkbookModalBottom"
+                class="btn-secondary"
+                type="button"
+            >
+                Fechar
+            </button>
+
+            <button
+                id="disconnectWorkbook"
+                type="button"
+                style="display: none;"
+            >
+                Remover vínculo
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <!-- =====================================================
+         CONFIRMAÇÃO DE LIMPEZA
+    ====================================================== -->
+
+    <div
+        id="confirmOverlay"
+        class="confirm-overlay"
+        style="display: none;"
+    >
+
+        <div class="confirm-box">
+
+            <h3>Limpar dados</h3>
+
+            <p>
+                Todos os dados importados e editados serão apagados.
+                Esta ação não poderá ser desfeita.
+            </p>
+
+            <div class="confirm-actions">
+
+                <button
+                    id="confirmCancel"
+                    class="btn-secondary"
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    id="confirmOk"
+                    class="btn-danger"
+                    type="button"
+                >
+                    🗑 Limpar tudo
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         AGENTE FINANCEIRO IA
+    ====================================================== -->
+
+    <section class="finance-agent" aria-labelledby="financeAgentTitle">
+
+        <div class="finance-agent-hero">
+
+            <div>
+
+                <span class="eyebrow">🤖 Agente de IA financeiro</span>
+
+                <h2 id="financeAgentTitle">Controle de gastos, orçamento e investimentos</h2>
+
+                <p>
+                    Registre entradas, despesas e aportes para receber alertas automáticos,
+                    identificar categorias que mais consomem dinheiro e acompanhar sua meta de investimento.
+                </p>
+
+            </div>
+
+            <div class="finance-agent-badge">
+                Análise local • Dados salvos no navegador
+            </div>
+
+        </div>
+
+        <div class="finance-kpi-grid">
+            <article class="finance-kpi">
+                <span>Renda prevista</span>
+                <strong id="financeIncomeValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi danger">
+                <span>Gastos do mês</span>
+                <strong id="financeExpenseValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi success">
+                <span>Investido</span>
+                <strong id="financeInvestmentValue">R$ 0,00</strong>
+            </article>
+            <article class="finance-kpi balance">
+                <span>Saldo projetado</span>
+                <strong id="financeBalanceValue">R$ 0,00</strong>
+            </article>
+        </div>
+
+        <div class="finance-agent-grid">
+
+            <article class="finance-card">
+                <h3>Adicionar lançamento</h3>
+                <form id="financeTransactionForm" class="finance-form">
+                    <input name="description" type="text" placeholder="Descrição" required>
+                    <input name="category" type="text" placeholder="Categoria" required>
+                    <select name="type" aria-label="Tipo de lançamento">
+                        <option value="expense">Despesa</option>
+                        <option value="income">Renda</option>
+                        <option value="investment">Investimento</option>
+                    </select>
+                    <input name="amount" type="text" inputmode="decimal" placeholder="Valor" required>
+                    <input id="financeDate" name="date" type="date" required>
+                    <button class="btn-primary" type="submit">➕ Registrar</button>
+                </form>
+            </article>
+
+            <article class="finance-card">
+                <h3>Metas mensais</h3>
+                <form id="financeSettingsForm" class="finance-form">
+                    <label>
+                        Renda mensal
+                        <input id="financeMonthlyIncome" name="monthlyIncome" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Limite de gastos
+                        <input id="financeMonthlyBudget" name="monthlyBudget" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Meta de investimento
+                        <input id="financeInvestmentGoal" name="investmentGoal" type="text" inputmode="decimal">
+                    </label>
+                    <button class="btn-secondary" type="submit">💾 Salvar metas</button>
+                </form>
+            </article>
+
+            <article class="finance-card finance-insights">
+                <h3>Recomendações do agente</h3>
+                <div class="finance-progress-group">
+                    <span id="financeBudgetText">0% do orçamento usado</span>
+                    <div class="finance-progress"><i id="financeBudgetProgress"></i></div>
+                </div>
+                <div class="finance-progress-group">
+                    <span id="financeInvestmentText">0% da meta investida</span>
+                    <div class="finance-progress success"><i id="financeInvestmentProgress"></i></div>
+                </div>
+                <ul id="financeAdviceList" class="finance-advice-list"></ul>
+            </article>
+
+            <article class="finance-card">
+                <h3>Últimos lançamentos</h3>
+                <ul id="financeTransactionList" class="finance-transaction-list"></ul>
+            </article>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+         CONFIGURAÇÕES
+    ====================================================== -->
+
+    <section
+        id="configPanel"
+        class="panel-config"
+    >
+
+        <div class="config-panel-header">
+
+            <div>
+
+                <h2>⚙ Configurações do Relatório</h2>
+
+                <p>
+                    Personalize as informações exibidas no relatório.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="config-grid">
+
+            <article class="config-card config-card-general">
+
+                <div class="config-card-title">
+
+                    <span>📝</span>
+
+                    <div>
+                        <p class="assistant-label">Pierre IA</p>
+                        <h2 id="assistantTitle">Análise instantânea</h2>
+                        <p id="mainAdvice">
+                            Registre seus valores para eu acompanhar orçamento, saldo e aportes.
+                        </p>
+                    </div>
+                </aside>
+            </section>
+        </header>
+
+        <section class="metrics" aria-label="Resumo financeiro">
+            <article class="metric-card income">
+                <span>Renda do mês</span>
+                <strong id="financeIncomeValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card expense">
+                <span>Gastos</span>
+                <strong id="financeExpenseValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card investment">
+                <span>Investimentos</span>
+                <strong id="financeInvestmentValue">R$ 0,00</strong>
+            </article>
+            <article class="metric-card balance">
+                <span>Saldo livre</span>
+                <strong id="financeBalanceValue">R$ 0,00</strong>
+            </article>
+        </section>
+
+        <section class="workspace">
+            <div class="panel" id="lancamentos">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Lançamentos</p>
+                    <h2>Adicione renda, gasto ou investimento</h2>
+                </div>
+
+                <form id="financeTransactionForm" class="finance-form">
+                    <label>
+                        Descrição
+                        <input name="description" type="text" placeholder="Ex.: Aluguel, mercado, salário" required>
+                    </label>
+                    <label>
+                        Categoria
+                        <input name="category" type="text" placeholder="Ex.: Moradia, alimentação" required>
+                    </label>
+                    <label>
+                        Tipo
+                        <select name="type">
+                            <option value="expense">Despesa</option>
+                            <option value="income">Renda</option>
+                            <option value="investment">Investimento</option>
+                        </select>
+                    </label>
+                    <label>
+                        Valor
+                        <input name="amount" type="text" inputmode="decimal" placeholder="Ex.: 250,00" required>
+                    </label>
+                    <label>
+                        Data
+                        <input id="financeDate" name="date" type="date" required>
+                    </label>
+                    <button class="button primary full" type="submit">Adicionar no Pierre</button>
+                </form>
+            </div>
+
+            <div class="panel" id="plano">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Plano mensal</p>
+                    <h2>Defina seus limites</h2>
+                </div>
+
+                <form id="financeSettingsForm" class="finance-form compact">
+                    <label>
+                        Renda prevista
+                        <input id="financeMonthlyIncome" name="monthlyIncome" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Limite para gastar
+                        <input id="financeMonthlyBudget" name="monthlyBudget" type="text" inputmode="decimal">
+                    </label>
+                    <label>
+                        Meta para investir
+                        <input id="financeInvestmentGoal" name="investmentGoal" type="text" inputmode="decimal">
+                    </label>
+                    <button class="button secondary full" type="submit">Salvar plano</button>
+                </form>
+
+                <div class="progress-stack">
+                    <div>
+                        <div class="progress-label">
+                            <span id="financeBudgetText">0% do limite usado</span>
+                        </div>
+                        <div class="progress danger"><i id="financeBudgetProgress"></i></div>
+                    </div>
+                    <div>
+                        <div class="progress-label">
+                            <span id="financeInvestmentText">0% da meta investida</span>
+                        </div>
+                        <div class="progress success"><i id="financeInvestmentProgress"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel advice-panel">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Recomendações</p>
+                    <h2>O que Pierre faria agora</h2>
+                </div>
+                <ul id="financeAdviceList" class="advice-list"></ul>
+            </div>
+
+            <div class="panel transactions-panel">
+                <div class="panel-heading">
+                    <p class="eyebrow dark">Histórico</p>
+                    <h2>Últimos movimentos</h2>
+                </div>
+                <ul id="financeTransactionList" class="transaction-list"></ul>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/finance-agent.js"></script>
+        </div>
+
+
+        <div
+            id="bannerDisplay"
+            class="rep-banner"
+        ></div>
+
+
+        <div
+            id="reportGrid"
+            class="rep-grid"
+        ></div>
+
+
+        <footer class="rep-bottombar">
+
+            DISCIPLINA NA INFORMAÇÃO
+            <span>•</span>
+            EXCELÊNCIA NA GESTÃO
+            <span>•</span>
+            PRAZO DE ENVIO DIÁRIO
+
+        </footer>
+
+    </section>
+
+</div>
+
+
+<!-- =====================================================
+     ARQUIVOS JAVASCRIPT
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/excel.js"></script>
+<script src="js/sharepoint.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/report.js"></script>
+<script src="js/render.js"></script>
+<script src="js/events.js"></script>
+<script src="js/finance-agent.js"></script>
+<script src="js/app.js"></script>
+
 </body>
 </html>
