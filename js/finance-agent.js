@@ -1,6 +1,7 @@
 /* ============================================================
    FINANCE-AGENT.JS
    Pierre: agente local para controle de gastos e investimentos.
+   Agente local para controle de gastos, orçamento e investimentos.
 ============================================================ */
 
 const FINANCE_AGENT_STORAGE_KEY = "financeAgentStateV1";
@@ -138,6 +139,23 @@ function getFinanceAgentAdvice(totals) {
         advice.push("Pierre calculou saldo negativo. Corte despesas recorrentes antes de assumir novos compromissos.");
     } else if (topCategory) {
         advice.push(`Pierre encontrou o maior foco de economia: ${topCategory[0]}, com ${formatCurrency(topCategory[1])} em gastos.`);
+        advice.push("Seu orçamento de gastos foi ultrapassado. Trave compras não essenciais até revisar as categorias mais caras.");
+    } else if (budgetUsage >= 0.8) {
+        advice.push("Você já usou mais de 80% do orçamento. Priorize contas obrigatórias e adie gastos variáveis.");
+    } else {
+        advice.push("O orçamento está saudável. Continue registrando os gastos para manter a previsão do mês confiável.");
+    }
+
+    if (investmentProgress < 0.5) {
+        advice.push("A meta de investimento está atrasada. Considere separar o aporte assim que a renda entrar.");
+    } else {
+        advice.push("Seu ritmo de investimento está bom. Mantenha a reserva e diversifique conforme seu perfil de risco.");
+    }
+
+    if (balance < 0) {
+        advice.push("O saldo projetado está negativo. Reduza despesas recorrentes antes de assumir novos compromissos.");
+    } else if (topCategory) {
+        advice.push(`Maior foco de economia: ${topCategory[0]}, com ${formatCurrency(topCategory[1])} em gastos.`);
     }
 
     return advice;
